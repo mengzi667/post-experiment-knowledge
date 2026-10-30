@@ -1,0 +1,4 @@
+interface:
+  display_name: "Post-Experiment Knowledge"
+  short_description: "Archive evidence and maintain concise research reports"
+  default_prompt: "Use $post-experiment-knowledge to explain the workflow and report hierarchy, confirm the template, save method and archive scope with choice cards, then organize these completed results."

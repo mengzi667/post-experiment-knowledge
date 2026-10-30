@@ -1,0 +1,4 @@
+# Release manifests and pinned interpreter members require exact bytes on every host.
+* -text whitespace=cr-at-eol
+# Preserve upstream runtime/license bytes; verify them through the pinned manifest.
+skills/post-experiment-knowledge/python/* -diff

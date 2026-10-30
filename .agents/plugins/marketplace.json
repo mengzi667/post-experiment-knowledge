@@ -1,0 +1,10 @@
+{
+  "name": "post-experiment-knowledge-beta",
+  "interface": {"displayName": "Post-Experiment Knowledge (Beta)"},
+  "plugins": [{
+    "name": "post-experiment-knowledge",
+    "source": {"source": "local", "path": "./"},
+    "policy": {"installation": "AVAILABLE", "authentication": "ON_USE"},
+    "category": "Productivity"
+  }]
+}
