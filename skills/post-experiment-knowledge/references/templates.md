@@ -1,6 +1,6 @@
 # Template selection and rendering
 
-Each topic needs an explicitly confirmed template before the CLI report workflow. Confirmation belongs to the private store, not the distributable Skill. There is no automatically selected default. Existing records remain readable without a selection; low-level `Store.record` remains a format-independent archival primitive, not the Skill workflow entrypoint.
+Each topic needs an explicitly confirmed template before report-preview or new report sync plans. Record, compare, organize and pure synthesis do not require a template. Confirmation belongs to the private store, not the distributable Skill. There is no automatically selected default. Existing records remain readable without a selection; low-level `Store.record` remains a format-independent archival primitive, not the Skill workflow entrypoint.
 
 Also check [the save method](destinations.md). Ask for missing template and location selections together. Confirmation of one does not automatically confirm the other.
 
@@ -21,7 +21,7 @@ Roles: metadata, overview, design, environment, data, execution, metrics, result
 
 ## Filled sections
 
-The `synthesize --prepare` bundle includes the frozen template and its section IDs. A complete draft can include `report_sections`, mapping those IDs to ordered blocks:
+The `synthesize --prepare` bundle includes the frozen template and its section IDs. For report preparation use report-preview --topic quality --sections PRIVATE_SECTIONS_JSON (the file contains the section mapping only). A legacy complete synthesis draft can also include `report_sections`, mapping those IDs to ordered blocks:
 
 ```json
 {"report_sections":{

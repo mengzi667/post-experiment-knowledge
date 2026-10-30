@@ -1,12 +1,12 @@
 # Post-Experiment Knowledge
 
-**0.5.0-beta.1 · 实验后知识管理插件 · Windows x64 一键安装测试版**
+**0.6.0-beta.1 · 实验后知识管理插件 · Windows x64 一键安装测试版**
 
 把已完成实验整理为“专题主报告 → 实验索引 → 完整证据与追溯档案”，保留原始证据，持续修订结论，避免报告反复堆叠。不执行实验。
 
 1. 在 GitHub Releases 下载 Windows x64 ZIP 并解压。
 2. 双击 `install.cmd`，安装器会校验文件并注册到当前用户的 Codex。无需安装 Python 或 pip，无需管理员权限。
-3. 新开 Codex 对话，输入 `$post-experiment-knowledge`。先确认模板、保存方式、上传范围及具体输出位置，再开始整理。
+3. 新开 Codex 对话，直接说明要归档、分析、保存报告或全部完成；Agent 根据场景选择技能。也可显式输入 `$post-experiment-knowledge`。先简要介绍功能和三层结构，只问当前步骤缺少的信息。
 
 需要已有支持插件的 Codex。飞书功能另外需要自己的 lark-cli 和账号授权；本地 Markdown 无需飞书。请先阅读 [Beta 已知限制](BETA.md)。本包不会携带作者的实验资料、私有地址或凭据。
 
@@ -30,33 +30,48 @@ The synthetic example produces 30 independent archived records, a single maintai
 
 Optional core installation: `python -m pip install --no-build-isolation --no-deps .`. For an Agent Skill or Plugin package, use the packaging helpers described below; do not copy private data into the repository.
 
-## Normal workflow
+## Four skills, one runtime
 
-Start with `setup --topic quality`. The Agent first introduces the plugin and displays the three-level report hierarchy in a fenced plain-text tree, then asks missing choices through native choice cards when available: template, report save method, archive-upload scope, and a required free-text concrete save location. Provide the actual Feishu report/parent URL and/or local output filename. A platform choice alone is insufficient. Confirmed choices are reused per topic; no choice is silently selected. Card rendering comes from the host Agent, not a separate web application.
+| Skill | Select when | Required information |
+| --- | --- | --- |
+| post-experiment-knowledge | Multi-stage work, historical reorganization, unclear outcome | Desired deliverables; clarify only if unclear |
+| experiment-record | Archive completed/failed/partial evidence | Relevant inputs, actual attempt identity, confirmed private local store |
+| experiment-synthesize | Compare evidence or maintain conclusions | Relevant evidence and research question; no report template/target |
+| experiment-sync | Save a prepared report or upload archives | Report: template + concrete targets; archives: scope + exact parent |
 
-First determine the topic's report template. `template show --topic quality` reuses a previously confirmed frozen selection. If none exists, ask the user for an existing template or review a new proposal. Use `template preview --topic quality --file PRIVATE_TEMPLATE_JSON --source SOURCE_VERSION` (or explicitly propose `--builtin`), then wait for user confirmation before `template confirm --topic quality --proposal PRIVATE_PROPOSAL --approve TEMPLATE_VERSION`. Changing a selection also needs `--expected-version CURRENT_VERSION`. No template is chosen automatically. Noninteractive first calls stop with `needs_template_selection`. See the [template contract](skills/post-experiment-knowledge/references/templates.md).
+All four allow implicit invocation; users need not name a skill. Selection depends on the host Agent's semantic matching, not a guaranteed keyword dispatcher or task monitor. Clear requests execute directly. Ambiguous requests get an outcome card before stage-specific questions. Native cards are rendered by the host; plain numbered choices are the fallback.
 
-At the same onboarding step, confirm the readable report's save method and exact location. `destination show --topic quality` reuses a confirmed choice. Options: local Markdown, an existing Feishu document, or both. Use `destination preview --topic quality --mode markdown --target ABSOLUTE_REPORT_FILENAME --root ABSOLUTE_AUTHORIZED_DIRECTORY --archive-scope none`, or `--mode feishu --document DOCUMENT_TOKEN`; both mode supplies both locations. Always explicitly choose `--archive-scope none|trace|full`; trace/full also requires `--archive-folder DRIVE_FOLDER_TOKEN`. Review the concrete proposal with the user, then `destination confirm --topic quality --proposal PRIVATE_PROPOSAL --approve DESTINATION_VERSION`. Changes also need `--expected-version CURRENT_VERSION`. Noninteractive missing selections return `needs_destination_selection`. See [save method selection](skills/post-experiment-knowledge/references/destinations.md).
+```text
+Research topic
+├── Main report: current conclusions, key evidence, limitations and decisions
+├── Experiment index: attempts, differences, states and archive links
+└── Complete archive
+    ├── Raw evidence: results, configuration, logs, controlled artifact references
+    └── Trace: record IDs, revisions, hashes and claim relationships
+```
 
-1. Point `record` at explicit existing result files and authorized roots. Use a metadata sidecar for differing formats.
-2. Use `synthesize --prepare` to create a private evidence bundle for the current authorized Agent.
-3. Review comparability and source conflicts. Author evidence-backed claims, then submit the draft with `synthesize --draft` and the expected knowledge version.
-4. Review the rendered main report; use `trace` for full evidence instead of appending all details.
-5. Generate `sync plan`, review it, then apply the user-authorized exact plan and verify it.
+These views are produced as requested, not a mandatory full workflow. A full request runs Record → Synthesize → Sync and checks every deliverable. All skills share one src/expkm core, private store/config and bundled interpreter under skills/post-experiment-knowledge/python.
 
-Rendering follows the confirmed headings, order and configuration tables, with flexible results blocks. Each knowledge snapshot pins its template. New sync plans require `--topic` and bind the selected version; a later template change blocks stale applies. Audit and recovery remain possible. A confirmed template does not authorize production writes.
+## Stage-specific setup and completion
 
-New sync plans also use the confirmed save method and location; adapter/target/root overrides must match. With one destination, `sync plan --topic quality` derives the adapter and target. With both, create a separate plan per `--adapter` and verify each receipt. A changed destination blocks old applies without stranding recovery. Selection itself does not write anything or grant permissions. Feishu document creation is outside this adapter; bind an existing document after any separately authorized setup. Local raw evidence and knowledge are retained; selected archival uploads create separate private remote snapshots.
+All commands below follow skills/post-experiment-knowledge/scripts/expkm.cmd and a global --store PRIVATE_STORE. Real inputs/settings/receipts remain outside the source and installed plugin.
 
-Every command supports `--help`. Global `--store` selects the private state directory; the default is under the current user's application-data directory. Private outputs must remain within that store. `--config` reads optional private adapter settings.
+1. Record: setup --topic quality --stage record. Confirm the exact local archive path via record-location preview/confirm. Only then record explicit existing files and authorized roots. Verify immutable evidence. No report template or destination needed.
+2. Synthesize: setup --topic quality --stage synthesize. Prepare evidence with synthesize --prepare; the authorized Agent reviews comparability and writes claims/decisions. synthesize --draft validates immutable references and numerical assertions. Pure analysis omits report_sections and does not publish. MLflow is optional and read-only.
+3. Sync report: setup --topic quality --stage sync --sync-kind report. Confirm an existing template or explicitly review a new proposal through template preview/confirm. Confirm local Markdown, Feishu or both and exact file/document via destination preview/confirm. New report selections default to no archive upload. Prior selections are reused. report-preview --topic quality --sections PRIVATE_SECTION_MAPPING renders the chosen template; prepared reports can go straight to sync planning.
+4. Sync archives: setup --topic quality --stage sync --sync-kind archive (or both). archive-destination preview/confirm selects trace/full and one exact folder or Wiki parent independently of reports/templates.
+5. Plan concrete changes, apply within existing user authorization and read back every requested output. Both report destinations require separate plans/receipts. Archives require their own plan and byte-verified receipt. If permissions/dependencies/conflicts prevent a stage, preserve completed work and explicitly retain pending steps.
 
-MLflow is an optional read-only source. `capture-mlflow` accepts a Run ID, selected metric history keys and explicit artifact paths. It supports approved HTTPS origins or local protected tunnels and does not follow redirects. It does not create, modify or repair Runs. No Run ID is required for local results.
+For multi-stage work the coordinator keeps a private workflow request and uses workflow --request PRIVATE_REQUEST to audit expected sources, evidence integrity, current knowledge, historical mappings when requested and final readback per destination. New report plans pin existing knowledge versions; stale conclusions cannot be satisfied by an old verified report. An audit verifies the listed scope, not arbitrary semantic truth or unlisted input completeness. Review readability, numbers and mapping manually.
 
-Feishu is an optional output adapter using existing lark-cli authentication. `sync plan` preserves native resources and defaults to read-only; writes require an explicit allowlist, concrete user authorization, a plan digest and `--allow-feishu-write`. The application does not authenticate or share documents for you.
+Template heading order and general data/environment/metric tables remain intact; result formats can vary. No template is auto-selected. Template/source changes require review and new confirmation. Recovery of old plans/records remains accessible after upgrades. See the skill's template/destination/archive references.
+
+Feishu uses the user's own optional lark-cli and private allowlist. Document creation/relocation requires the Agent's available external tools and concrete authorization; the core adapter only edits existing supported document blocks. No auto-login, permission escalation, model service or sharing change.
+
 
 ## Upload private evidence and trace archives
 
-Choose no archive upload, trace only, or raw evidence plus trace during setup. `archive plan --topic quality` builds a deterministic ZIP with an experiment index, immutable record revisions, knowledge history and SHA-256 manifest; full scope additionally includes archived raw objects. Configs, credentials and journals are excluded by construction. External weights/resources are references, not implicitly downloaded. Review the exact inventory and credential guard before upload.
+Only for requested archival Sync, choose no upload, trace only, or raw evidence plus trace; report-only work does not ask about uploads. `archive plan --topic quality` builds a deterministic ZIP with an experiment index, immutable record revisions, knowledge history and SHA-256 manifest; full scope additionally includes archived raw objects. Configs, credentials and journals are excluded by construction. External weights/resources are references, not implicitly downloaded. Review the exact inventory and credential guard before upload.
 
 `archive apply --plan PRIVATE_PLAN --approve PLAN_DIGEST --allow-feishu-upload` writes only to the selected folder, which must also appear in the private `feishu.allowed_archive_folders` list. It uses the existing user's lark-cli identity and does not change permissions. Verification downloads the uploaded ZIP and checks folder membership, size and SHA-256. A known upload is not repeated after a failed readback; an unknown result stops for reconciliation. Report and archive receipts are separate. See [archive operations](skills/post-experiment-knowledge/references/archives.md) for recovery and size limits. These ZIPs are private evidence artifacts, never plugin release packages.
 
@@ -66,7 +81,7 @@ Before a new upload, the adapter checks the actual folder-list read capability. 
 
 ## Historical reports
 
-`organize --topic quality --input SNAPSHOT --out PRIVATE_INVENTORY` inventories full DocxXML or a lark-cli fetch envelope after template selection. This is structural diagnosis, not automatic semantic migration. The Agent creates an explicit block mapping, a concise main report, an experiment index and a complete archive. Re-run with `--mapping` and `--main` to validate coverage and produce a private migration preview. Plain Markdown history can be recorded as evidence; use Markdown sync for maintained sections.
+`organize --topic quality --input SNAPSHOT --out PRIVATE_INVENTORY` inventories full DocxXML or a lark-cli fetch envelope without requiring report settings. This is structural diagnosis, not automatic semantic migration. The Agent creates an explicit block mapping, a concise main report, an experiment index and a complete archive. Re-run with `--mapping` and `--main` to validate coverage and produce a private migration preview. Plain Markdown history can be recorded as evidence; use Markdown sync for maintained sections.
 
 Original bytes and resource references are retained. External resource binaries are not implicitly downloaded. Live Feishu writes support atomic replacements, not automatic archival reorganization; full historical relocation remains a separately approved operation.
 
@@ -79,7 +94,7 @@ codex plugin marketplace add .
 codex plugin add post-experiment-knowledge@post-experiment-knowledge-beta
 ```
 
-The packaged local marketplace points at the extracted plugin. Keep that directory available for refreshes. Start a new chat or refresh/restart the host if discovery has not updated, then invoke `$post-experiment-knowledge`. Follow the first-use introduction and selection cards. This uses a local marketplace, not public submission. Refer to the [official local marketplace instructions](https://developers.openai.com/plugins/build/plugins) for host-specific UI differences. Other Agents that support Agent Skills can use the standalone Skill/runtime; their native plugin formats are not claimed to be tested.
+The packaged local marketplace points at the extracted plugin. Keep that directory available for refreshes. Start a new chat or refresh/restart the host if discovery has not updated, then invoke `$post-experiment-knowledge`. Follow the first-use introduction and selection cards. This uses a local marketplace, not public submission. Refer to the [official local marketplace instructions](https://developers.openai.com/plugins/build/plugins) for host-specific UI differences. Other Agents can adapt the Skill format; their native plugin installation and implicit routing are not claimed to be tested.
 
 For the Windows x64 release, the Agent invokes `scripts\expkm.cmd` inside the installed Skill. It always uses that Skill's bundled interpreter with isolated imports, ignores PYTHONHOME/PYTHONPATH, and does not modify registry or PATH. Runtime files and licenses are included at `skills/post-experiment-knowledge/python/`. It runs from arbitrary working directories and paths with spaces/non-ASCII names. It does not install packages or download a runtime on first use. If `python/python.exe` is missing, the launcher reports an incomplete package rather than using system Python. Other platform bundles are not yet provided; their source/Skill installation still requires Python 3.10+.
 
@@ -93,7 +108,7 @@ build_plugin(Path('.'), Path('PRIVATE_BUILD_DIRECTORY') / 'post-experiment-knowl
 install_skill(Path('.'), Path('PRIVATE_SKILLS_DIRECTORY') / 'post-experiment-knowledge', windows_runtime=official_zip)
 ```
 
-The standalone installed Skill includes a copy of the generic core and, when `windows_runtime` is supplied, the same bundled interpreter and licenses. Existing Skill directories are never overwritten. Omitting that argument deliberately builds a source-only package. The ZIP has portable and compatibility manifests, a local marketplace catalog and an onboarding entrypoint; no MCP server or hooks are required. Host UI rendering and account setup remain host-specific.
+The legacy install_skill helper installs one discoverable coordinator with companion instructions and one runtime; use the plugin for four independently discoverable skills. The standalone entry includes generic core and, with windows_runtime, the same interpreter/licenses. Existing Skill directories are never overwritten. Omitting that argument deliberately builds a source-only package. The ZIP has portable and compatibility manifests, a local marketplace catalog and an onboarding entrypoint; no MCP server or hooks are required. Host UI rendering and account setup remain host-specific.
 
 Builders obtain the embedded ZIP from the [official Python 3.14.10 release](https://www.python.org/downloads/release/python-31410/). `runtime/windows-x86_64.json` pins the official archive SHA-256 and every member name, size and SHA-256. A different archive, extra member or modified member fails packaging. Binary runtime files bypass text scanning only after exact lock verification; all generic code/doc files still use the distribution allowlist and scan. The final ZIP is checked again. CPython and bundled third-party notices are retained in its original `LICENSE.txt`. The runtime is upgraded only through a reviewed lock/package update, never silently from a user's environment. See [Python embedded-distribution guidance](https://docs.python.org/3/using/windows.html#the-embeddable-package).
 

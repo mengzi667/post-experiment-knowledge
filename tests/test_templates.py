@@ -48,15 +48,18 @@ def test_source_change_and_switch_need_new_confirmation_and_cas(tmp_path):
     current=t.confirm('quality',p,p['version'],first['version'])
     assert current['version']!=first['version']
 
-def test_cli_refuses_record_before_reading_experiment_when_template_unset(tmp_path):
+def test_cli_refuses_record_before_reading_experiment_when_local_location_unset(tmp_path):
     store=tmp_path/'private';root=tmp_path/'input';root.mkdir();file=root/'bad.json';file.write_text('not json')
     args=parser().parse_args(['--store',str(store),'record','--topic','quality','--source-id','one','--file',str(file),'--root',str(root)])
-    with pytest.raises(TemplateRequired):run(args)
+    from expkm.selections import SelectionRequired
+    with pytest.raises(SelectionRequired):run(args)
     assert Store(store).records()==[]
 
-def test_knowledge_api_also_requires_a_confirmed_template(tmp_path):
+def test_knowledge_without_report_is_template_independent(tmp_path):
     store,row=recorded(tmp_path)
-    with pytest.raises(TemplateRequired):Knowledge(store).update('quality',draft([row]))
+    state=Knowledge(store).update('quality',draft([row]))
+    assert state['report_template'] is None
+    with pytest.raises(TemplateRequired):render(state)
 
 def test_render_obeys_builtin_structure_and_preserves_flexible_result_blocks(tmp_path):
     store,row=recorded(tmp_path);binding=approve(store);assert binding
@@ -100,7 +103,7 @@ def test_cli_template_selection_is_explicit_and_prepare_contains_frozen_binding(
     store=tmp_path/'private'
     def cli(*argv):return run(parser().parse_args(['--store',str(store),*map(str,argv)]))
     proposal=cli('template','preview','--topic','quality','--builtin')
-    with pytest.raises(TemplateRequired):cli('synthesize','--topic','quality','--prepare')
+    assert cli('synthesize','--topic','quality','--prepare')['status']=='needs_agent_synthesis'
     cli('template','confirm','--topic','quality','--proposal',proposal['proposal'],'--approve',proposal['version'])
     save_locally(store)
     output=cli('synthesize','--topic','quality','--prepare')
@@ -121,9 +124,10 @@ def test_sync_requires_template_and_stale_plan_cannot_write_but_can_rollback(tmp
     assert cli('sync','rollback','--plan',p['output'],'--approve',p['plan_id'])['restored']
     assert not target.exists()
 
-def test_cli_template_gate_happens_before_mlflow_configuration_or_network(tmp_path):
+def test_cli_local_location_gate_happens_before_mlflow_configuration_or_network(tmp_path):
     args=parser().parse_args(['--store',str(tmp_path/'private'),'capture-mlflow','--topic','q','--run','synthetic'])
-    with pytest.raises(TemplateRequired):run(args)
+    from expkm.selections import SelectionRequired
+    with pytest.raises(SelectionRequired):run(args)
 
 def test_mutable_exports_cannot_replace_template_confirmation(tmp_path):
     from expkm.cli import save_private
@@ -135,5 +139,7 @@ def test_filled_report_content_cannot_disappear_without_revision_reason(tmp_path
     store,row=recorded(tmp_path);approve(store);d=draft([row])
     d['report_sections']={'limitations':[{'type':'paragraph','text':'Important known boundary.'}]}
     old=Knowledge(store).update('quality',d)
-    with pytest.raises(ValueError):Knowledge(store).update('quality',draft([row]),old['version'])
-    assert Knowledge(store).head('quality')==old
+    new=Knowledge(store).update('quality',draft([row]),old['version'])
+    assert new['report_sections']==old['report_sections']
+    cleared=draft([row]);cleared['report_sections']={}
+    with pytest.raises(ValueError):Knowledge(store).update('quality',cleared,new['version'])

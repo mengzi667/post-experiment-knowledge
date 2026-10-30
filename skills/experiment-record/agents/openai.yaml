@@ -1,0 +1,6 @@
+interface:
+  display_name: "Experiment Record"
+  short_description: "Archive existing results with identities and traceability"
+  default_prompt: "Use $experiment-record to archive my completed or failed experiment results."
+policy:
+  allow_implicit_invocation: true

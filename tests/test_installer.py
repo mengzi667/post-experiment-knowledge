@@ -55,3 +55,33 @@ def test_install_is_repeatable_and_never_overwrites_modified_existing_files(tmp_
     with pytest.raises(ValueError,match='checksum'):
         install_release(source,dest,codex='codex.exe',runner=runner)
     assert (dest/'README.md').read_text()=='user change'
+
+
+def test_version_upgrade_reuses_marketplace_without_touching_user_records(tmp_path):
+    import shutil
+    from expkm.installer import install_release
+    original=Path(__file__).parents[1]
+    source=tmp_path/'source'
+    shutil.copytree(original,source,ignore=shutil.ignore_patterns('.git','__pycache__','.pytest_cache'))
+    class Success:
+        returncode=0; stdout='{}'; stderr=''
+    runner=lambda *a,**k:Success()
+    def release(version):
+        for name in ['plugin.json','.codex-plugin/plugin.json']:
+            path=source/name; obj=json.loads(path.read_text());obj['version']=version
+            path.write_text(json.dumps(obj))
+        out=tmp_path/(version+'.zip');packaging.build_plugin(source,out)
+        unpack=tmp_path/version
+        with zipfile.ZipFile(out) as z:z.extractall(unpack)
+        return unpack/'post-experiment-knowledge'
+    a=release('0.5.0-beta.1');b=release('0.6.0-beta.1')
+    root=tmp_path/'marketplace';old=root/'0.5.0-beta.1'
+    install_release(a,old,codex='codex.exe',runner=runner)
+    private=tmp_path/'private-evidence.txt';private.write_text('SYNTHETIC_PRIVATE_HISTORY')
+    original_manifest=(old/'release-manifest.json').read_bytes()
+    new=root/'0.6.0-beta.1';result=install_release(b,new,codex='codex.exe',runner=runner)
+    catalog=json.loads((root/'.agents/plugins/marketplace.json').read_text())
+    assert result['version']=='0.6.0-beta.1'
+    assert catalog['plugins'][0]['source']['path']=='./0.6.0-beta.1'
+    assert (old/'release-manifest.json').read_bytes()==original_manifest
+    assert private.read_text()=='SYNTHETIC_PRIVATE_HISTORY'

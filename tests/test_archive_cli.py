@@ -28,9 +28,9 @@ def test_archive_cli_preview_never_uploads_and_apply_requires_opt_in(tmp_path,mo
 
 def test_setup_cli_returns_intro_and_selection_cards(tmp_path):
     from expkm.store import Store
-    store=Store(tmp_path/'private');value=cli(store,'setup','--topic','quality')
+    store=Store(tmp_path/'private');value=cli(store,'setup','--topic','quality','--stage','sync','--sync-kind','both')
     assert value['status']=='needs_setup' and value['introduction'].index('```text')>0
-    assert [q['id'] for q in value['questions']]==['template','save_method','archive_scope','save_location']
+    assert [q['id'] for q in value['questions']]==['template','save_method','save_location','archive_scope','archive_location']
 
 def test_cli_missing_scope_is_actionable_before_any_upload(tmp_path,monkeypatch,capsys):
     from expkm.cli import main

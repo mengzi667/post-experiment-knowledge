@@ -5,7 +5,7 @@ import zipfile
 from .common import atomic_bytes, canonical, digest, identifier, lock, read_json, write_json, within
 from .destinations import Destinations
 from .knowledge import Knowledge
-from .templates import Templates
+from .selections import Selections
 from .sync import authorize, sealed
 from .privacy import check_payload
 
@@ -24,8 +24,7 @@ class ArchiveSync:
         if not isinstance(max_bytes, int) or isinstance(max_bytes, bool) or not 1 <= max_bytes <= 1_000_000_000:
             raise ValueError('An explicit positive archive size limit is required, at most 1 GB')
         with lock(self.store.root):
-            Templates(self.store).require(topic)
-            binding = Destinations(self.store).require(topic); policy = binding['definition']['archives']
+            binding = Selections(self.store, 'archive-destination').require(topic); policy = binding['definition']['archives']
             if policy['scope'] == 'none':
                 raise ValueError('No archival upload was selected')
             records = self.store.records(topic)
@@ -107,7 +106,7 @@ class ArchiveSync:
         sha = plan['bundle_sha256']
         if not isinstance(sha, str) or not re.fullmatch('[a-f0-9]{64}', sha) or plan['bundle'] != 'bundles/'+sha+'.zip' or plan['name'] != plan['topic']+'-'+plan['scope']+'-'+sha[:16]+'.zip':
             raise ValueError('Archive name or object binding mismatch')
-        selections = Destinations(self.store)
+        selections = Selections(self.store, 'archive-destination')
         binding = selections.require(plan['topic']) if current else selections.get(plan['topic'], plan['destination_version'])
         kind, target = archive_target(plan)
         if binding['version'] != plan['destination_version'] or binding['definition']['archives'] != {'scope': plan['scope'], 'wiki' if kind == 'wiki' else 'folder': target}:

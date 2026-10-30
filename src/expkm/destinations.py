@@ -94,8 +94,6 @@ class Destinations:
         if not head.exists():
             raise DestinationRequired(topic)
         value = self.get(topic, read_json(head)['version'])
-        if 'archives' not in value['definition']:
-            raise DestinationRequired(topic)
         return value
 
     def resolve(self, binding, adapter=None, target=None, roots=()):

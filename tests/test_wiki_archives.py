@@ -73,7 +73,7 @@ def test_setup_exposes_only_private_confirmed_personal_space_default(tmp_path,mo
     from expkm.store import Store
     value=setup_status(Store(tmp_path/'project'),'quality')
     assert value['default_personal_space']==pref['personal_space']
-    assert len(value['questions'])==4
+    assert [q['id'] for q in value['questions']]==['outcome']
 
 
 def test_cli_wiki_selection_and_adoption_are_read_only(tmp_path,monkeypatch):

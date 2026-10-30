@@ -1,0 +1,6 @@
+interface:
+  display_name: "Experiment Sync"
+  short_description: "Save reports and selected evidence archives safely"
+  default_prompt: "Use $experiment-sync to save my prepared report and explicitly selected archives."
+policy:
+  allow_implicit_invocation: true

@@ -2,9 +2,7 @@
 
 All examples are synthetic. Put real sidecars and drafts in the private store.
 
-First complete [template selection](templates.md). Reuse the topic's confirmed version for later calls. No implicit default is selected.
-
-Also confirm [the report save method and location](destinations.md). The prepared bundle includes both bindings. Evidence remains local and private even when the readable report is destined for Feishu.
+Record needs a confirmed private local store (record-location preview/confirm). Analysis needs relevant evidence. Neither needs a report template or report destination. Only report preparation/saving uses [template selection](templates.md) and [report destinations](destinations.md).
 
 ## Record
 
@@ -50,6 +48,6 @@ Use actual IDs from the private context bundle. Statuses: candidate, confirmed, 
 
 Optional structured assertions use `record_id`, `revision`, a JSON `path` array, and `value`. They must cite a record in the claim's evidence and equal the stored value. An evidence `quote`, when given, must occur in the archived UTF-8 source. Programmatic validation is not semantic proof.
 
-Subsequent updates require `--expected-version` from the current head. Changed text/status/questions, decisions, filled report sections or adopted template versions require a top-level `reason`. Keep previous claim IDs and mark them superseded when needed; omission is rejected. Drafts are complete snapshots: preserve previously filled report sections when updating. All previous snapshots remain traceable.
+Subsequent updates require `--expected-version` from the current head. Changed text/status/questions, decisions, filled report sections or adopted template versions require a top-level `reason`. Keep previous claim IDs and mark them superseded when needed; omission is rejected. Pure synthesis omits report_sections and preserves previously filled report sections. Explicit report_sections requires a confirmed template; the example report_sections is optional. All previous snapshots remain traceable.
 
 Thirty supporting experiments can attach to one claim. The main report shows the conclusion and evidence count, while the context and trace retain every record.

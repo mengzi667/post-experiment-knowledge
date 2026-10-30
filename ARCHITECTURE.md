@@ -4,9 +4,12 @@ Sources feed immutable evidence/records; the current authorized Agent proposes k
 
 ## Data and interfaces
 
+Four implicitly callable skills share src/expkm, one private store/config and one bundled interpreter under the coordinator. Stage-specific setup avoids unrelated questions. Selections stores record-location and archive-destination independently. workflow audits expected source coverage, evidence bytes, pinned knowledge, reviewed historical mappings and separate current readbacks; it never executes experiments or calls a model. Implicit matching is a host Agent decision, not a task watcher.
+
+
 - `Store.record`: explicit topic, actual attempt identity, metadata, evidence files and approved roots. Immutable content-addressed object bytes; atomic record head/history; advisory single-writer lock.
-- `Templates`: private topic-bound proposal, explicit digest confirmation and compare-and-swap changes. Frozen definitions are data, not executable templates. Workflow entrypoints require confirmation before experiment payload reads; raw archival primitives remain independent.
-- `Destinations`: separate private topic-bound save-method/location selection. No default platform, implicit target override, network contact or write permission on confirmation. CLI workflows require both selections; sync plans seal both versions. The core record/knowledge model remains independent of the destination.
+- `Templates`: private topic-bound proposal, explicit digest confirmation and compare-and-swap changes. Frozen definitions are data, not executable templates. Only report preparation/sync requires a template; recording and pure knowledge maintenance are independent.
+- `Destinations`: separate private topic-bound save-method/location selection. No default platform, implicit target override, network contact or write permission on confirmation. Only report sync requires report selections; plans seal template/destination and, when present, knowledge versions. The core record/knowledge model remains independent of the destination.
 - `setup_status`: presentation-neutral introduction, fenced plain-text hierarchy and missing choice-card data; the local Agent renders the host's native questions. No new UI/model service.
 - `ArchiveSync`: deterministic topic-scoped trace/full ZIP with a checksum manifest and readable index. Explicit scope/folder/version-bound upload plans, private pending/token journals, byte-level download verification and unknown-result reconciliation. `LarkDrive` uses existing user authentication with explicit folder allowlists; no sharing or credential management.
 - `read_result` and optional `MLflowSource`: preserve source distinctions and access errors. Unknown formats require an explicit conversion/profile. No generic parser claims to understand arbitrary experiment logs.

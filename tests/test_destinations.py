@@ -6,6 +6,7 @@ from expkm.store import Store
 from expkm.templates import Templates,default_template
 from expkm.destinations import Destinations,DestinationRequired,DestinationTargetRequired
 from expkm.cli import parser,run,save_private,main
+from expkm.selections import SelectionRequired
 
 
 def template(store,topic='quality'):
@@ -45,11 +46,11 @@ def test_destination_reuse_and_changes_are_topic_bound_and_version_checked(tmp_p
     assert new!=old and d.require('quality')==new
 
 
-def test_destination_gate_precedes_experiment_read_and_mlflow(tmp_path):
+def test_local_location_gate_precedes_experiment_read_and_mlflow(tmp_path):
     store=Store(tmp_path/'private');template(store)
     missing=tmp_path/'does-not-exist.json'
-    with pytest.raises(DestinationRequired):cli(store,'record','--topic','quality','--source-id','one','--file',missing,'--root',tmp_path)
-    with pytest.raises(DestinationRequired):cli(store,'capture-mlflow','--topic','quality','--run','synthetic')
+    with pytest.raises(SelectionRequired):cli(store,'record','--topic','quality','--source-id','one','--file',missing,'--root',tmp_path)
+    with pytest.raises(SelectionRequired):cli(store,'capture-mlflow','--topic','quality','--run','synthetic')
     assert store.records()==[]
 
 
@@ -57,7 +58,7 @@ def test_cli_preview_confirmation_and_prepared_bundle_reuse(tmp_path):
     store=Store(tmp_path/'private');template(store)
     p=cli(store,'destination','preview','--topic','quality','--mode','markdown','--target',store.root/'report.md','--root',store.root,'--archive-scope','none')
     assert p['status']=='needs_destination_confirmation'
-    with pytest.raises(DestinationRequired):cli(store,'synthesize','--topic','quality','--prepare')
+    assert cli(store,'synthesize','--topic','quality','--prepare')['status']=='needs_agent_synthesis'
     confirmed=cli(store,'destination','confirm','--topic','quality','--proposal',p['proposal'],'--approve',p['version'])
     assert confirmed['status']=='destination_confirmed'
     out=cli(store,'synthesize','--topic','quality','--prepare')
@@ -119,7 +120,8 @@ def test_destination_validation_protects_public_code_and_unreviewed_changes(tmp_
 
 def test_noninteractive_call_reports_missing_destination_without_payload(tmp_path,capsys):
     store=Store(tmp_path/'private');template(store)
-    code=main(['--store',str(store.root),'synthesize','--topic','quality','--prepare'])
+    content=store.root/'preview.md';content.write_text('Synthetic report')
+    code=main(['--store',str(store.root),'sync','plan','--topic','quality','--content',str(content)])
     assert code==2
     assert json.loads(capsys.readouterr().out)['status']=='needs_destination_selection'
 
@@ -162,8 +164,9 @@ def test_legacy_destination_needs_upload_scope_choice_without_erasing_old_bindin
     legacy['version']=digest(legacy);folder=store.root/'destinations'/'quality'
     write_json(folder/(legacy['version']+'.json'),legacy);write_json(folder/'head.json',{'version':legacy['version']})
     d=Destinations(store)
-    with pytest.raises(DestinationRequired):d.require('quality')
-    assert [q['id'] for q in setup_status(store,'quality')['questions']]==['archive_scope']
+    assert d.require('quality')==legacy
+    assert not setup_status(store,'quality','sync','report')['questions']
+    assert [q['id'] for q in setup_status(store,'quality','sync','archive')['questions']]==['archive_scope','archive_location']
     p=d.propose('quality',{**legacy['definition'],'archives':{'scope':'none'}})
     d.confirm('quality',p,p['version'],legacy['version'])
     assert d.get('quality',legacy['version'])==legacy

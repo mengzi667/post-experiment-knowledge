@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "post-experiment-knowledge"
-version = "0.5.0b1"
+version = "0.6.0b1"
 description = "Private, platform-independent post-experiment records, synthesis, and report maintenance"
 requires-python = ">=3.10"
 dependencies = []

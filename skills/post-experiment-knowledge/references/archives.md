@@ -1,5 +1,7 @@
 # Private evidence and trace archive uploads
 
+Archive-only Sync needs no report template/document. Use setup --topic quality --stage sync --sync-kind archive. Select scope and exact parent with archive-destination preview --topic quality --scope full|trace --wiki NODE (or --folder TOKEN), then confirm the reviewed proposal. Independent selections override legacy report archive settings. All commands share the coordinator launcher/store.
+
 Use only after the user explicitly selects `archives.scope` and an exact existing Drive folder. Report destination and archival upload are independent: Feishu-only reports can use no upload, trace or full. Local reports can also have an explicitly selected private Drive archive. No public upload, share change, folder creation or source execution occurs.
 
 Wiki parents are also supported explicitly via `archives: {scope, wiki}` and `--archive-wiki`. Configure their exact tokens separately in private `feishu.allowed_archive_wiki_nodes`. Upload uses `drive +upload --wiki-token`; verification resolves the resulting file's Wiki node and checks its object identity, name and exact parent, then downloads and checks its bytes. Wiki verification uses node metadata, not Drive folder enumeration. Do not pass a Wiki token to `--archive-folder` or silently fall back to Drive root.

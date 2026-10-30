@@ -20,7 +20,7 @@ def authorize(plan, approved):
 
 
 def validate_template_ref(plan):
-    for name in ['report_template', 'report_destination']:
+    for name in ['report_template', 'report_destination', 'report_knowledge']:
         if name not in plan:
             continue
         ref = plan[name]
@@ -29,6 +29,8 @@ def validate_template_ref(plan):
         identifier(ref['topic']); identifier(ref['version'])
     if 'report_template' in plan and 'report_destination' in plan and plan['report_template']['topic'] != plan['report_destination']['topic']:
         raise ValueError('Sync template and destination must belong to the same topic')
+    if 'report_knowledge' in plan and ('report_template' not in plan or plan['report_knowledge']['topic'] != plan['report_template']['topic']):
+        raise ValueError('Report knowledge must belong to the same topic')
 
 def signature(xml, include_ids=False):
     nodes = list(parse_xml(xml))
@@ -53,7 +55,7 @@ class MarkdownSync:
 
     def _target(self, plan):
         required = {'schema_version', 'adapter', 'target', 'allowed_roots', 'existed', 'before', 'after', 'plan_id'}
-        if set(plan) - {'report_template', 'report_destination'} != required or plan['schema_version'] != 1 or plan['adapter'] != 'markdown' or not isinstance(plan['existed'], bool):
+        if set(plan) - {'report_template', 'report_destination', 'report_knowledge'} != required or plan['schema_version'] != 1 or plan['adapter'] != 'markdown' or not isinstance(plan['existed'], bool):
             raise ValueError('Invalid Markdown plan schema')
         validate_template_ref(plan)
         target = within(plan['target'], plan['allowed_roots'])
@@ -164,7 +166,7 @@ class FeishuSync:
     def _validate(self, plan, approved):
         authorize(plan, approved)
         required = {'schema_version', 'adapter', 'target', 'base_revision', 'before_blocks', 'changes', 'plan_id'}
-        if set(plan) - {'report_template', 'report_destination'} != required or plan['schema_version'] != 1 or plan['adapter'] != 'feishu' or plan['target'] != getattr(self.client, 'document', 'injected-client'):
+        if set(plan) - {'report_template', 'report_destination', 'report_knowledge'} != required or plan['schema_version'] != 1 or plan['adapter'] != 'feishu' or plan['target'] != getattr(self.client, 'document', 'injected-client'):
             raise ValueError('Invalid Feishu plan or target')
         validate_template_ref(plan)
         if not isinstance(plan['base_revision'], int) or plan['base_revision'] < 0:

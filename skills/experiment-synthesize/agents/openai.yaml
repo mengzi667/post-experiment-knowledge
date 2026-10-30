@@ -1,0 +1,6 @@
+interface:
+  display_name: "Experiment Synthesize"
+  short_description: "Compare evidence and maintain research conclusions"
+  default_prompt: "Use $experiment-synthesize to compare archived results and update the supported conclusions."
+policy:
+  allow_implicit_invocation: true

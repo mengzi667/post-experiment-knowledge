@@ -8,10 +8,11 @@ import zipfile
 from pathlib import Path
 from .common import atomic_bytes, digest, no_symlinks
 
-MODULES = ('__init__', '__main__', 'common', 'documents', 'store', 'sources', 'templates', 'destinations', 'onboarding', 'archives', 'privacy', 'drive', 'knowledge', 'sync', 'feishu', 'cli', 'packaging', 'installer')
+MODULES = ('__init__', '__main__', 'common', 'documents', 'store', 'sources', 'templates', 'destinations', 'selections', 'workflow', 'onboarding', 'archives', 'privacy', 'drive', 'knowledge', 'sync', 'feishu', 'cli', 'packaging', 'installer')
 SKILL_FILES = ('SKILL.md', 'agents/openai.yaml', 'scripts/expkm.py', 'scripts/expkm.cmd', 'references/contracts.md', 'references/sync-and-privacy.md', 'references/templates.md', 'references/destinations.md', 'references/archives.md')
 RUNTIME_LOCK = 'runtime/windows-x86_64.json'
-PUBLIC_FILES = ('pyproject.toml', 'plugin.json', '.codex-plugin/plugin.json', '.agents/plugins/marketplace.json', 'README.md', 'BETA.md', 'LICENSE', 'install.cmd', 'scripts/install.py', 'ARCHITECTURE.md', 'RESEARCH.md', 'ROADMAP.md', 'VALIDATION.md', 'examples/synthetic30.py', RUNTIME_LOCK) + tuple('src/expkm/'+m+'.py' for m in MODULES) + tuple('skills/post-experiment-knowledge/'+f for f in SKILL_FILES)
+SPECIALISTS = ('experiment-record','experiment-synthesize','experiment-sync')
+PUBLIC_FILES = ('pyproject.toml', 'plugin.json', '.codex-plugin/plugin.json', '.agents/plugins/marketplace.json', 'README.md', 'BETA.md', 'LICENSE', 'install.cmd', 'scripts/install.py', 'ARCHITECTURE.md', 'RESEARCH.md', 'ROADMAP.md', 'VALIDATION.md', 'examples/synthetic30.py', RUNTIME_LOCK) + tuple('src/expkm/'+m+'.py' for m in MODULES) + tuple('skills/post-experiment-knowledge/'+f for f in SKILL_FILES) + tuple('skills/'+s+'/'+f for s in SPECIALISTS for f in ('SKILL.md','agents/openai.yaml'))
 
 def scan(raw):
     text = raw.decode('utf-8')
@@ -100,6 +101,7 @@ def build_plugin(source, destination, windows_runtime=None):
             'bundled_python': runtime_version, 'platform': 'windows-x86_64' if runtime_version else 'source-only'}
 
 def install_skill(source, destination, windows_runtime=None):
+    """Legacy single-entry installation. Full four-skill discovery uses the plugin."""
     destination = no_symlinks(destination)
     if destination.exists():
         raise ValueError('Existing skill is never overwritten')
@@ -112,6 +114,14 @@ def install_skill(source, destination, windows_runtime=None):
     try:
         for relative in SKILL_FILES:
             atomic_bytes(staging/relative, files['skills/post-experiment-knowledge/'+relative])
+        # Companion instructions remain usable through the coordinator even in
+        # this legacy non-discoverable layout. One runtime, no sibling overwrite.
+        for name in SPECIALISTS:
+            for relative in ('SKILL.md', 'agents/openai.yaml'):
+                raw = files['skills/'+name+'/'+relative]
+                if relative == 'SKILL.md':
+                    raw = raw.replace(b'../post-experiment-knowledge/', b'../../')
+                atomic_bytes(staging/'companions'/name/relative, raw)
         for module in MODULES:
             atomic_bytes(staging/'runtime'/'expkm'/(module+'.py'), files['src/expkm/'+module+'.py'])
         atomic_bytes(staging/'runtime-lock.json', files[RUNTIME_LOCK])
@@ -123,4 +133,4 @@ def install_skill(source, destination, windows_runtime=None):
         shutil.rmtree(staging)
         raise
     return {'installed': True, 'runtime_bundled': True, 'bundled_python': runtime_version,
-            'files': len(SKILL_FILES)+len(MODULES)+1+len(binaries)}
+            'files': len(SKILL_FILES)+2*len(SPECIALISTS)+len(MODULES)+1+len(binaries)}

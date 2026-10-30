@@ -124,11 +124,11 @@ def test_destination_change_blocks_upload_but_historical_verification_survives(t
 
 
 def test_intro_has_text_tree_before_option_questions_and_reuses_confirmed_choices(tmp_path):
-    store=Store(tmp_path/'private');status=setup_status(store,'quality');assert status
+    store=Store(tmp_path/'private');status=setup_status(store,'quality','sync','both');assert status
     assert '```text\n' in status['introduction'] and '专题主报告' in status['introduction'] and '追溯' in status['introduction']
-    assert {q['id'] for q in status['questions']}=={'template','save_method','archive_scope','save_location'}
+    assert {q['id'] for q in status['questions']}=={'template','save_method','save_location','archive_scope','archive_location'}
     assert all(2<=len(q['options'])<=3 for q in status['questions'] if 'options' in q)
-    ready,_=project(tmp_path/'ready');value=setup_status(ready,'quality');assert value
+    ready,_=project(tmp_path/'ready');value=setup_status(ready,'quality','sync','both');assert value
     assert value['questions']==[] and value['status']=='ready'
 
 

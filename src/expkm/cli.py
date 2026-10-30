@@ -13,6 +13,7 @@ from .destinations import Destinations, DestinationRequired, DestinationTargetRe
 from .archives import ArchiveSync, archive_target
 from .onboarding import setup_status
 from .drive import FeishuPermissionError
+from .selections import Selections, SelectionRequired
 
 def parser():
     p = argparse.ArgumentParser(prog='expkm', description='Record / Synthesize / Sync already-produced results; no experiment execution.')
@@ -21,6 +22,17 @@ def parser():
     sub = p.add_subparsers(dest='command', required=True)
     sub.add_parser('doctor'); sub.add_parser('reindex')
     setup = sub.add_parser('setup'); setup.add_argument('--topic', required=True)
+    setup.add_argument('--stage', choices=['workflow','record','synthesize','sync'], default='workflow')
+    setup.add_argument('--sync-kind', choices=['report','archive','both'], default='report')
+    workflow = sub.add_parser('workflow'); workflow.add_argument('--request', type=Path, required=True)
+    for name in ['record-location', 'archive-destination']:
+        choice = sub.add_parser(name); choice.add_argument('operation', choices=['preview','confirm','show'])
+        choice.add_argument('--topic', required=True); choice.add_argument('--proposal', type=Path)
+        choice.add_argument('--approve'); choice.add_argument('--expected-version')
+        if name == 'archive-destination':
+            choice.add_argument('--scope', choices=['none','trace','full'])
+            parent = choice.add_mutually_exclusive_group()
+            parent.add_argument('--wiki'); parent.add_argument('--folder')
     template = sub.add_parser('template'); template.add_argument('operation', choices=['preview', 'confirm', 'show'])
     template.add_argument('--topic', required=True)
     selection = template.add_mutually_exclusive_group()
@@ -41,6 +53,8 @@ def parser():
     m.add_argument('--history-key', action='append', default=[]); m.add_argument('--artifact', action='append', default=[])
     s = sub.add_parser('synthesize'); s.add_argument('--topic', required=True); s.add_argument('--prepare', action='store_true')
     s.add_argument('--draft', type=Path); s.add_argument('--expected-version'); s.add_argument('--out', type=Path)
+    report = sub.add_parser('report-preview'); report.add_argument('--topic', required=True)
+    report.add_argument('--sections', type=Path); report.add_argument('--out', type=Path)
     c = sub.add_parser('compare'); c.add_argument('--left', required=True); c.add_argument('--right', required=True); c.add_argument('--metric', required=True)
     c.add_argument('--changed-variable', action='append', default=[]); c.add_argument('--out', type=Path)
     o = sub.add_parser('organize'); o.add_argument('--topic', required=True); o.add_argument('--input', type=Path, required=True); o.add_argument('--mapping', type=Path)
@@ -73,15 +87,37 @@ def run(args):
     templates = Templates(store)
     destinations = Destinations(store)
     if args.command == 'setup':
-        return setup_status(store, args.topic)
+        return setup_status(store, args.topic, args.stage, args.sync_kind)
+    if args.command == 'workflow':
+        from .workflow import check
+        return check(store, read_json(args.request), args.config)
+    if args.command in {'record-location','archive-destination'}:
+        choices = Selections(store, args.command)
+        if args.operation == 'preview':
+            from .common import display_path
+            if args.command == 'record-location':
+                definition = {'store':display_path(store.root)}
+            else:
+                policy = {'scope':args.scope}
+                if args.wiki is not None: policy['wiki'] = args.wiki
+                if args.folder is not None: policy['folder'] = args.folder
+                definition = {'archives':policy}
+            proposal = choices.propose(args.topic, definition)
+            path = save_private(store, store.root/'selection-previews'/(proposal['version']+'.json'), proposal)
+            return {'status':'needs_selection_confirmation','version':proposal['version'],'proposal':path,'write_authorized':False}
+        if args.operation == 'confirm':
+            if args.proposal is None: raise ValueError('A reviewed selection is required')
+            value = choices.confirm(args.topic, read_json(args.proposal), args.approve, args.expected_version)
+        else:
+            value = choices.require(args.topic)
+        return {'status':'selection_confirmed','version':value['version'],'write_authorized':False}
     if args.command == 'destination':
         if args.operation == 'preview':
             if args.mode is None:
                 raise ValueError('Explicitly choose a report save method')
-            if args.archive_scope is None:
-                raise DestinationRequired(args.topic)
-            definition = {'mode': args.mode, 'archives': {'scope': args.archive_scope}}
-            if args.archive_scope != 'none':
+            scope = args.archive_scope or 'none'
+            definition = {'mode': args.mode, 'archives': {'scope': scope}}
+            if scope != 'none':
                 location = 'wiki' if args.archive_wiki is not None else 'folder'
                 definition['archives'][location] = args.archive_wiki if location == 'wiki' else args.archive_folder
             elif args.archive_folder is not None or args.archive_wiki is not None:
@@ -128,9 +164,8 @@ def run(args):
                 'binding': str(store.root/'templates'/args.topic/(value['version']+'.json'))}
     binding = None
     destination = None
-    if args.command in {'record', 'capture-mlflow', 'synthesize', 'organize'}:
-        binding = templates.require(args.topic)
-        destination = destinations.require(args.topic)
+    if args.command in {'record', 'capture-mlflow'}:
+        Selections(store, 'record-location').require(args.topic)
     config = read_json(args.config) if args.config else {}
     if args.command == 'doctor':
         import shutil
@@ -175,6 +210,10 @@ def run(args):
     if args.command == 'synthesize':
         knowledge = Knowledge(store)
         if args.prepare:
+            try: binding = templates.require(args.topic)
+            except TemplateRequired: pass
+            try: destination = destinations.require(args.topic)
+            except DestinationRequired: pass
             path = args.out or store.root/'drafts'/(args.topic+'-input.json')
             output = save_private(store, path, {'topic': args.topic, 'report_template': binding, 'report_destination': destination,
                                                'current': knowledge.head(args.topic), 'records': store.records(args.topic), 'semantic_synthesis': 'current_authorized_agent_only'})
@@ -182,12 +221,20 @@ def run(args):
         if not args.draft:
             raise ValueError('Provide an Agent-authored draft or request preparation')
         state = knowledge.update(args.topic, read_json(args.draft), args.expected_version)
-        output = save_private(store, args.out or store.root/'previews'/(args.topic+'.md'), render(state), text=True)
+        output = None
+        if state.get('report_template') and 'report_sections' in read_json(args.draft):
+            output = save_private(store, args.out or store.root/'previews'/(args.topic+'.md'), render(state), text=True)
         return {'version': state['version'], 'claims': len(state['claims']), 'preview': output}
+    if args.command == 'report-preview':
+        binding = templates.require(args.topic)
+        state = Knowledge(store).head(args.topic)
+        if state is None: raise ValueError('No knowledge to render')
+        state = {**state, 'report_template':binding}
+        if args.sections is not None: state['report_sections'] = read_json(args.sections)
+        output = save_private(store, args.out or store.root/'previews'/(args.topic+'.md'), render(state), text=True)
+        return {'preview':output, 'knowledge_version':state['version'], 'template_version':binding['version']}
     if args.command == 'compare':
         left, right = store.get(args.left), store.get(args.right)
-        templates.require(left['topic']); templates.require(right['topic'])
-        destinations.require(left['topic']); destinations.require(right['topic'])
         result = compare(left, right, args.metric, args.changed_variable)
         output = save_private(store, args.out or store.root/'comparisons'/'latest.json', result)
         return {'comparability': result['comparability'], 'output': output, 'decision_changed': False}
@@ -232,6 +279,10 @@ def run(args):
                 if destination['version'] != destination_ref['version']:
                     raise ValueError('Save method or location changed; regenerate and review the report update plan')
                 destinations.resolve(destination, plan['adapter'], plan['target'], plan.get('allowed_roots', []))
+                if plan.get('report_knowledge'):
+                    current = Knowledge(store).head(ref['topic'])
+                    if current is None or current['version'] != plan['report_knowledge']['version']:
+                        raise ValueError('Knowledge changed; regenerate the reviewed report plan')
             elif ref:
                 # Historical bindings remain usable for audit and recovery.
                 templates.get(ref['topic'], ref['version'])
@@ -253,6 +304,9 @@ def run(args):
             del plan['plan_id']
             plan['report_template'] = {'topic': binding['topic'], 'version': binding['version']}
             plan['report_destination'] = {'topic': destination['topic'], 'version': destination['version']}
+            current = Knowledge(store).head(binding['topic'])
+            if current:
+                plan['report_knowledge'] = {'topic':binding['topic'], 'version':current['version']}
             sealed(plan)
             out = save_private(store, args.out or store.root/'plans'/(plan['plan_id']+'.json'), plan)
             return {'plan_id': plan['plan_id'], 'output': out, 'apply_authorized': False}
@@ -318,6 +372,10 @@ def main(argv=None):
         return 2
     except DestinationTargetRequired:
         print(json.dumps({'status': 'needs_destination_adapter', 'message': 'Both destinations are selected. Create and verify one plan per selected adapter; do not silently omit either output.'}))
+        return 2
+    except SelectionRequired as exc:
+        print(json.dumps({'status':'needs_'+exc.kind.replace('-','_')+'_selection',
+                          'message':'Confirm only the missing private location or archive scope for this stage. No payload was printed or uploaded.'}))
         return 2
     except FeishuPermissionError as exc:
         print(json.dumps({'status': 'needs_feishu_authorization', 'missing_scopes': exc.missing_scopes,

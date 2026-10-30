@@ -49,12 +49,23 @@ class Knowledge:
 
     def update(self, topic, draft, expected_version=None):
         identifier(topic)
-        binding = Templates(self.store).require(topic)
+        old = self.head(topic)
+        # Knowledge maintenance is independent of readable reports.
+        binding = old.get('report_template') if old else None
+        if 'report_sections' in draft or binding is None:
+            try:
+                binding = Templates(self.store).require(topic)
+            except TemplateRequired:
+                if 'report_sections' in draft:
+                    raise
         # Copy caller input, reject nonfinite values, keep user/Agent judgment explicit.
         draft = json.loads(canonical(draft)); claims = draft.get('claims', [])
         if set(draft) - {'claims', 'decisions', 'reason', 'report_sections'}:
             raise ValueError('Unknown or reserved knowledge draft fields')
-        validate_blocks(binding['definition'], draft.get('report_sections', {}))
+        if 'report_sections' not in draft and old and 'report_sections' in old:
+            draft['report_sections'] = old['report_sections']
+        if binding:
+            validate_blocks(binding['definition'], draft.get('report_sections', {}))
         if not claims:
             raise ValueError('A structured Agent draft with evidence is required')
         ids = set()
@@ -96,7 +107,7 @@ class Knowledge:
                 raise ValueError('Decision must reference verified draft claims')
         folder = self.store.root/'knowledge'/topic
         with lock(self.store.root):
-            if Templates(self.store).require(topic)['version'] != binding['version']:
+            if binding and Templates(self.store).get(topic, binding['version']) != binding:
                 raise ValueError('Template changed while preparing the report')
             old = self.head(topic)
             if (old['version'] if old else None) != expected_version:
@@ -106,7 +117,7 @@ class Knowledge:
                 changed = any(c['id'] not in by_id or any(c.get(k) != by_id[c['id']].get(k) for k in ['text', 'status', 'question']) for c in old['claims'])
                 changed = (changed or old.get('decisions') != draft.get('decisions', [])
                            or old.get('report_sections', {}) != draft.get('report_sections', {})
-                           or old.get('report_template', {}).get('version') != binding['version'])
+                           or (old.get('report_template') or {}).get('version') != (binding or {}).get('version'))
                 if changed and not draft.get('reason'):
                     raise ValueError('Conclusion, report content or template revision requires a reason')
                 # Omission does not silently erase old claims.
