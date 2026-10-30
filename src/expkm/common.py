@@ -55,7 +55,7 @@ def output_path(path, store_root, allow_external=False):
         raise ValueError('Private output cannot target distributable code')
     if path.is_relative_to(root):
         relative = path.relative_to(root)
-        reserved = {'objects', 'records', 'knowledge', 'templates', 'destinations', 'record-location', 'archive-destination', 'bundles', 'archive-sync', 'incoming', 'sync', 'lark', 'lark-drive', 'index.sqlite3', '.writer.lock'}
+        reserved = {'objects', 'records', 'knowledge', 'templates', 'destinations', 'record-location', 'archive-destination', 'intake', 'bundles', 'archive-sync', 'incoming', 'sync', 'lark', 'lark-drive', 'index.sqlite3', '.writer.lock'}
         if not relative.parts or relative.parts[0] in reserved:
             raise ValueError('Output targets reserved private state')
     elif not allow_external:

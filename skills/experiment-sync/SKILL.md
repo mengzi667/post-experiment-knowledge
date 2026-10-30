@@ -5,13 +5,13 @@ description: Save or minimally update prepared experiment reports in local Markd
 
 # Sync
 
-Use the shared `../post-experiment-knowledge/scripts/expkm.cmd --store PRIVATE_STORE`. On first use show the [coordinator](../post-experiment-knowledge/SKILL.md) introduction/tree before questions. Distinguish report-only, archive-only and both from the actual request; if unclear ask the desired output, not internal skill names. Run `setup --topic TOPIC --stage sync --sync-kind report|archive|both`.
+Use the shared launcher/private store. **First follow [mandatory intake](../post-experiment-knowledge/references/intake.md)**: clarify this request, require a user-provided/explicitly selected template and concrete result locations, show the complete summary with native cards and await actual confirmation. Archive-only also requires a template and exact local store. Distinguish report-only, archive-only and both; do not ask for internal skill names. Run setup --stage sync --sync-kind report|archive|both, then pass the confirmed --intake VERSION.
 
 Ask only current missing choices:
 
 - **Report:** selected template, report save method (Markdown/Feishu/both), concrete file/document or authorized parent. Use existing confirmed choices. No archive question/upload when only a report was requested; new report destinations default to no archive upload.
-- **Archives only:** trace or raw+trace scope and exact Feishu folder/Wiki parent. No report template or report document required.
-- **Both:** collect the union of missing choices. Selecting a destination alone grants no write/upload authorization; reuse explicit current authorization when it covers the exact action.
+- **Archives only:** mandatory template/local result store plus trace or raw+trace scope and exact Feishu parent. An unrequested report document is unnecessary.
+- **Both:** collect the union of missing choices, then confirm the entire request summary. Stored preferences prefill the summary; they do not authorize a new task or upload.
 
 Use native cards for options and free text for paths/URLs. Don't silently select built-in templates, infer a tenant/Drive root or upload evidence because a report is on Feishu. See [template selection](../post-experiment-knowledge/references/templates.md), [stage settings](../post-experiment-knowledge/references/destinations.md) and [archives](../post-experiment-knowledge/references/archives.md) as needed.
 
@@ -26,3 +26,5 @@ For **both report destinations**, create/apply/verify one plan per adapter; no s
 Keep all private data/config/token bindings outside the plugin; no telemetry, model API, public fixtures or sharing changes. Feishu uses the user's own optional lark-cli/auth. Missing dependency/permission stays pending, not automatic login or scope escalation.
 
 For multi-stage requests return to the coordinator and run the final `workflow` audit. Deliver verified report links/files and separate archive/index/trace receipts; identify any pending stage. A preview is not a saved report and an uploaded archive is not a saved report.
+
+Archive limits are part of the confirmed intake and sealed export plan; freshness audit reuses the reviewed limit. Close the intake after final delivery. Historic verification remains available, but it never authorizes a new apply.

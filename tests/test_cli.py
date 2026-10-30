@@ -5,6 +5,11 @@ import subprocess
 import sys
 
 def call(*args):
+    from confirmed_cli import approved_args
+    from expkm.store import Store
+    args=list(args)
+    if '--store' in args:
+        k=args.index('--store'); prefix=args[:k+2]; args=[*prefix,*approved_args(Store(args[k+1]),args[k+2:])]
     return subprocess.run([sys.executable,'-m','expkm',*map(str,args)],capture_output=True,text=True,encoding='utf-8',env={**os.environ,'PYTHONPATH':str(Path(__file__).parents[1]/'src')})
 
 def select_setup(store,topic):

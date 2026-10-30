@@ -4,7 +4,7 @@ from .templates import Templates, TemplateRequired
 from .destinations import Destinations
 from .selections import Selections, SelectionRequired
 
-INTRODUCTION = '''本插件在实验结束后归档证据、维护研究结论并保存报告，不执行实验。提供已有结果或历史记录，说明希望归档、分析、保存报告，或全部完成；Agent 按目标选择步骤，只询问当前步骤缺少的信息，已确认设置可复用。
+INTRODUCTION = '''本插件在实验结束后归档证据、维护研究结论并保存报告，不执行实验。每次新请求先问清目标、范围和要求，确认用户提供或明确指定的模板，以及具体保存位置，再按目标选择步骤。已有偏好可预填本次确认单，不自动授权新任务。
 
 ```text
 研究专题
@@ -15,10 +15,10 @@ INTRODUCTION = '''本插件在实验结束后归档证据、维护研究结论�
     └── 追溯记录：实验 ID、版本、哈希及结论证据关系
 ```
 
-这是按需生成的三层视图。可只归档或只分析；保存报告时才确认模板和报告位置。原始证据默认留在私有本地目录，明确选择上传范围和目录后才上传。'''
+这是按需生成的三层视图。正式执行必须确认模板和具体保存位置。也可选择由 Codex 推荐模板：先确认需求、范围和位置，只读查看必要材料，展示推荐后再确认模板。能选择的问题优先使用原生选项卡，路径、链接和特殊要求使用卡片中的文本输入。预选不代表作答。'''
 
 
-def setup_status(store, topic, stage='workflow', sync_kind='report'):
+def setup_status(store, topic, stage='workflow', sync_kind='report', intake_version=None):
     identifier(topic); questions = []
     if stage not in {'workflow','record','synthesize','sync'} or sync_kind not in {'report','archive','both'}:
         raise ValueError('Unknown requested stage')
@@ -37,22 +37,34 @@ def setup_status(store, topic, stage='workflow', sync_kind='report'):
     except (ValueError, OSError, KeyError, TypeError, AttributeError):
         personal_space = None; preference_warning = True
     template = destination = None
-    if stage == 'workflow':
+    confirmed=None
+    if intake_version is not None:
+        from .intake import Intakes
+        selected=stage
+        if stage=='workflow':
+            identifier(intake_version)
+            definition=read_json(store.root/'intake'/'confirmed'/(intake_version+'.json'))['definition']
+            selected='recommend-template' if definition['phase']=='template-recommendation' else definition['stages'][0]
+        confirmed=Intakes(store).require(intake_version,selected,topic)
+    if confirmed is None:
+        questions.append({'id':'requirements','required':True,
+                          'title':'请先确认本次目标、资料范围、交付物和限制要求；已有信息会汇总展示，确认后才开始处理。',
+                          'options':['确认本次汇总的需求与要求','补充或调整需求、范围与限制']})
+    try:
+        template=Templates(store).require(topic)
+    except TemplateRequired:
+        questions.append({'id':'template','required':True,'title':'请提供或明确指定本次必须使用的模板（链接、文件或已提供的结构）。',
+                          'options':['提供已有模板链接或文件','明确沿用此前提供的模板','由 Codex 根据本次实验推荐模板，展示后由我确认']})
+    try:
+        Selections(store,'record-location').require(topic)
+    except SelectionRequired:
+        questions.append({'id':'record_location','required':True,
+                          'title':'请提供结果与追溯档案保存的具体私有本地目录；不能只选择平台或使用未确认的默认路径。'})
+    if stage == 'workflow' and confirmed is None:
         questions.append({'id':'outcome', 'required':True,
                           'title':'本次希望完成什么？目标已说明时直接选择相应步骤，无需再问。',
                           'options':['完整整理：归档、分析并保存报告','仅归档已有结果','仅分析和维护结论','仅保存已有报告或上传档案']})
-    if stage == 'record':
-        try:
-            Selections(store, 'record-location').require(topic)
-        except SelectionRequired:
-            questions.append({'id':'record_location','required':True,
-                              'title':'实验原始证据和追溯记录保存到哪个私有本地目录？请提供路径；可确认使用当前建议目录。'})
     if stage == 'sync' and sync_kind in {'report','both'}:
-        try:
-            template = Templates(store).require(topic)
-        except TemplateRequired:
-            questions.append({'id':'template','required':True, 'title':'本专题采用哪份报告模板？',
-                              'options':['使用已有模板（提供文档或文件）','先查看并确认一份新模板']})
         head = store.root/'destinations'/topic/'head.json'
         destination = Destinations(store).get(topic, read_json(head)['version']) if head.exists() else None
         if destination is None:
@@ -73,9 +85,11 @@ def setup_status(store, topic, stage='workflow', sync_kind='report'):
                 {'id':'archive_location','required':True,
                  'title':'请选择档案的飞书目标目录或知识库节点链接；选择不上传时无需提供。'}])
     return {'status':'needs_setup' if questions else 'ready', 'stage':stage,
+            'execution_allowed':confirmed is not None and confirmed['definition']['phase']=='execution' and not questions,
+            'recommendation_read_allowed':confirmed is not None and confirmed['definition']['phase']=='template-recommendation',
             'introduction':INTRODUCTION, 'questions':questions,
             'suggested_record_location':str(store.root), 'default_personal_space':personal_space,
             'preference_warning':preference_warning,
             'template_version':template['version'] if template else None,
             'destination_version':destination['version'] if destination else None,
-            'location_followup':'Ask only unresolved details for the requested stage. Reuse explicit choices in context. A known goal selects stages directly; workflow cards only clarify an ambiguous goal. Selection never grants remote write permission.'}
+            'location_followup':'Before experiment payload reads, clarify this request and show its requirements, mandatory template and all exact save locations. Use native choice cards and free-text fields. Preferences may prefill the summary, never authorize a new request. Confirm an intake, then pass its explicit version to each processing command. Platform write authorization stays separate.'}

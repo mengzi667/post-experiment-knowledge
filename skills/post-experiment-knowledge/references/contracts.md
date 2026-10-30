@@ -2,7 +2,7 @@
 
 All examples are synthetic. Put real sidecars and drafts in the private store.
 
-Record needs a confirmed private local store (record-location preview/confirm). Analysis needs relevant evidence. Neither needs a report template or report destination. Only report preparation/saving uses [template selection](templates.md) and [report destinations](destinations.md).
+Every formal CLI request needs confirmed goal/scope/requirements, a mandatory [template](templates.md), an exact local result store and this request's [intake](intake.md). Requested reports/uploads additionally need their exact destinations. Low-level library independence does not bypass the Skill/CLI procedure.
 
 ## Record
 

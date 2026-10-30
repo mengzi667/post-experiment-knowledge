@@ -4,12 +4,12 @@ Sources feed immutable evidence/records; the current authorized Agent proposes k
 
 ## Data and interfaces
 
-Four implicitly callable skills share src/expkm, one private store/config and one bundled interpreter under the coordinator. Stage-specific setup avoids unrelated questions. Selections stores record-location and archive-destination independently. workflow audits expected source coverage, evidence bytes, pinned knowledge, reviewed historical mappings and separate current readbacks; it never executes experiments or calls a model. Implicit matching is a host Agent decision, not a task watcher.
+Four implicitly callable skills share src/expkm, one private store/config and one bundled interpreter under the coordinator. Every request uses mandatory goal/scope/requirements, template and exact-location intake before formal processing; stage-specific questions add only requested outputs. A restricted recommendation intake can read bounded selected context before final template confirmation. Selections stores record-location and archive-destination independently. workflow audits expected source coverage, evidence bytes, pinned knowledge, reviewed historical mappings and separate current readbacks; it never executes experiments or calls a model. Implicit matching is a host Agent decision, not a task watcher.
 
 
 - `Store.record`: explicit topic, actual attempt identity, metadata, evidence files and approved roots. Immutable content-addressed object bytes; atomic record head/history; advisory single-writer lock.
-- `Templates`: private topic-bound proposal, explicit digest confirmation and compare-and-swap changes. Frozen definitions are data, not executable templates. Only report preparation/sync requires a template; recording and pure knowledge maintenance are independent.
-- `Destinations`: separate private topic-bound save-method/location selection. No default platform, implicit target override, network contact or write permission on confirmation. Only report sync requires report selections; plans seal template/destination and, when present, knowledge versions. The core record/knowledge model remains independent of the destination.
+- `Templates`: private topic-bound proposal, explicit digest confirmation and compare-and-swap changes. Frozen definitions are data, not executable templates. All formal CLI processing requires the confirmed request/template/location gate. Trusted core primitives remain independent for application use.
+- `Destinations`: separate private topic-bound save-method/location selection. No default platform, implicit target override, network contact or write permission on confirmation. Every request requires an exact private result store; requested reports additionally require their precise targets; plans seal template/destination and, when present, knowledge versions. The core record/knowledge model remains independent of the destination.
 - `setup_status`: presentation-neutral introduction, fenced plain-text hierarchy and missing choice-card data; the local Agent renders the host's native questions. No new UI/model service.
 - `ArchiveSync`: deterministic topic-scoped trace/full ZIP with a checksum manifest and readable index. Explicit scope/folder/version-bound upload plans, private pending/token journals, byte-level download verification and unknown-result reconciliation. `LarkDrive` uses existing user authentication with explicit folder allowlists; no sharing or credential management.
 - `read_result` and optional `MLflowSource`: preserve source distinctions and access errors. Unknown formats require an explicit conversion/profile. No generic parser claims to understand arbitrary experiment logs.
@@ -17,6 +17,8 @@ Four implicitly callable skills share src/expkm, one private store/config and on
 - `Knowledge.update`: verify evidence identities/hashes, optional quotes and numeric assertions, enforce expected-version checks, preserve conclusion/decision history. Agent semantic claims remain reviewable.
 - `inventory` / `migration_preview`: structural inventory and exhaustive explicit block destinations with original XML retained. The Agent supplies semantic placement and the actual concise main report.
 - Markdown and Feishu share plan/digest/verify concepts, not platform identifiers. Feishu identities and reference maps remain adapter state.
+
+Intakes stores immutable per-request metadata, explicit confirmation and closure separately from reusable preferences. New plans seal the intake version. Source roots, topics, capabilities and current template/location versions are checked before experimental payload access; recommendation-phase tokens cannot execute formal stages. This is not cryptographic evidence of user UI consent, nor an agent scheduler.
 
 ## Why these choices
 

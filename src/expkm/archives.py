@@ -90,6 +90,7 @@ class ArchiveSync:
                 raise ValueError('Existing private bundle integrity failure')
             atomic_bytes(path, raw)
         return sealed({'schema_version': 1, 'adapter': 'feishu-archive', 'topic': topic, 'scope': policy['scope'],
+                       'max_bytes':max_bytes,
                        'destination_version': binding['version'],
                        **({'wiki_parent': policy['wiki']} if 'wiki' in policy else {'folder': policy['folder']}), 'bundle': relative,
                        'bundle_sha256': sha, 'bytes': len(raw), 'name': topic+'-'+policy['scope']+'-'+sha[:16]+'.zip',
@@ -99,8 +100,11 @@ class ArchiveSync:
         authorize(plan, plan['plan_id'])
         target_key = 'wiki_parent' if 'wiki_parent' in plan else 'folder'
         required = {'schema_version', 'adapter', 'topic', 'scope', 'destination_version', target_key, 'bundle', 'bundle_sha256', 'bytes', 'name', 'inventory', 'records', 'record_revisions', 'plan_id'}
-        if set(plan) != required or plan['schema_version'] != 1 or plan['adapter'] != 'feishu-archive' or plan['scope'] not in {'trace', 'full'}:
+        if set(plan)-{'max_bytes','intake_version'} != required or plan['schema_version'] != 1 or plan['adapter'] != 'feishu-archive' or plan['scope'] not in {'trace', 'full'}:
             raise ValueError('Invalid archival upload plan')
+        if 'max_bytes' in plan and (not isinstance(plan['max_bytes'],int) or isinstance(plan['max_bytes'],bool) or not 1<=plan['max_bytes']<=1_000_000_000 or plan['bytes']>plan['max_bytes']):
+            raise ValueError('Invalid reviewed archive size limit')
+        if 'intake_version' in plan:identifier(plan['intake_version'])
         for k in ['topic', 'destination_version', target_key]:
             identifier(plan[k])
         sha = plan['bundle_sha256']

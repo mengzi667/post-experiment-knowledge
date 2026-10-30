@@ -5,7 +5,9 @@ import pytest
 from expkm.store import Store
 from expkm.templates import Templates,default_template
 from expkm.destinations import Destinations,DestinationRequired,DestinationTargetRequired
+from confirmed_cli import run_confirmed, approved_args
 from expkm.cli import parser,run,save_private,main
+from expkm.intake import IntakeRequired
 from expkm.selections import SelectionRequired
 
 
@@ -23,7 +25,7 @@ def selected(store,topic='quality',definition=None):
 
 
 def cli(store,*args):
-    return run(parser().parse_args(['--store',str(store.root),*map(str,args)]))
+    return run_confirmed(store,*args)
 
 
 def test_no_implicit_save_method_and_proposal_does_not_confirm_or_write(tmp_path):
@@ -49,8 +51,8 @@ def test_destination_reuse_and_changes_are_topic_bound_and_version_checked(tmp_p
 def test_local_location_gate_precedes_experiment_read_and_mlflow(tmp_path):
     store=Store(tmp_path/'private');template(store)
     missing=tmp_path/'does-not-exist.json'
-    with pytest.raises(SelectionRequired):cli(store,'record','--topic','quality','--source-id','one','--file',missing,'--root',tmp_path)
-    with pytest.raises(SelectionRequired):cli(store,'capture-mlflow','--topic','quality','--run','synthetic')
+    with pytest.raises(IntakeRequired):run(parser().parse_args(['--store',str(store.root),'record','--topic','quality','--source-id','one','--file',str(missing),'--root',str(tmp_path)]))
+    with pytest.raises(IntakeRequired):run(parser().parse_args(['--store',str(store.root),'capture-mlflow','--topic','quality','--run','synthetic']))
     assert store.records()==[]
 
 
@@ -123,7 +125,7 @@ def test_noninteractive_call_reports_missing_destination_without_payload(tmp_pat
     content=store.root/'preview.md';content.write_text('Synthetic report')
     code=main(['--store',str(store.root),'sync','plan','--topic','quality','--content',str(content)])
     assert code==2
-    assert json.loads(capsys.readouterr().out)['status']=='needs_destination_selection'
+    assert json.loads(capsys.readouterr().out)['status']=='needs_request_confirmation'
 
 
 def test_feishu_only_routes_to_selected_document_without_local_target_or_write(tmp_path,monkeypatch):
@@ -165,8 +167,8 @@ def test_legacy_destination_needs_upload_scope_choice_without_erasing_old_bindin
     write_json(folder/(legacy['version']+'.json'),legacy);write_json(folder/'head.json',{'version':legacy['version']})
     d=Destinations(store)
     assert d.require('quality')==legacy
-    assert not setup_status(store,'quality','sync','report')['questions']
-    assert [q['id'] for q in setup_status(store,'quality','sync','archive')['questions']]==['archive_scope','archive_location']
+    assert [q['id'] for q in setup_status(store,'quality','sync','report')['questions']]==['requirements']
+    assert [q['id'] for q in setup_status(store,'quality','sync','archive')['questions']]==['requirements','archive_scope','archive_location']
     p=d.propose('quality',{**legacy['definition'],'archives':{'scope':'none'}})
     d.confirm('quality',p,p['version'],legacy['version'])
     assert d.get('quality',legacy['version'])==legacy

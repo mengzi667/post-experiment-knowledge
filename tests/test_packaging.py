@@ -33,6 +33,6 @@ def test_clean_plugin_extraction_can_launch_without_source_checkout_or_pip(tmp_p
     result=subprocess.run([sys.executable,str(plugin/'skills/post-experiment-knowledge/scripts/expkm.py'),'--store',str(tmp_path/'private'),'setup','--topic','synthetic'],cwd=tmp_path,capture_output=True,encoding='utf-8',env=env)
     assert result.returncode==0,result.stderr
     value=json.loads(result.stdout)
-    assert value['status']=='needs_setup' and [q['id'] for q in value['questions']]==['outcome']
+    assert value['status']=='needs_setup' and [q['id'] for q in value['questions']]==['requirements','template','record_location','outcome']
     catalog=json.loads((plugin/'.agents/plugins/marketplace.json').read_text())
     assert catalog['plugins'][0]['source']['path']=='./'

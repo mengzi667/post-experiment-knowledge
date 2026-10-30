@@ -1,6 +1,6 @@
 # Template selection and rendering
 
-Each topic needs an explicitly confirmed template before report-preview or new report sync plans. Record, compare, organize and pure synthesis do not require a template. Confirmation belongs to the private store, not the distributable Skill. There is no automatically selected default. Existing records remain readable without a selection; low-level `Store.record` remains a format-independent archival primitive, not the Skill workflow entrypoint.
+Every formal CLI request, including Record and Synthesize, needs an explicitly confirmed template and intake. Offer existing template, reuse previous template, or Codex recommendation for review. The separately confirmed recommendation phase permits only bounded necessary context before template selection; see [intake](intake.md). Confirmation belongs to the private store, not the distributable Skill. There is no automatically selected default. Existing records remain readable without a selection; low-level `Store.record` remains a format-independent archival primitive, not the Skill workflow entrypoint.
 
 Also check [the save method](destinations.md). Ask for missing template and location selections together. Confirmation of one does not automatically confirm the other.
 

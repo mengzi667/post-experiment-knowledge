@@ -94,7 +94,7 @@ def check(store, request, config=None):
             if plan.get('topic') == topic and plan.get('scope') == scope and plan.get('destination_version') == binding['version']:
                 # A historical bundle must not mask missing new records/knowledge.
                 from .archives import ArchiveSync
-                fresh = ArchiveSync(store).plan(topic)
+                fresh = ArchiveSync(store).plan(topic,max_bytes=plan.get('max_bytes',1_000_000_000))
                 if fresh['bundle_sha256'] == plan.get('bundle_sha256'):
                     ok = verify('archive', path)
         if not ok: remaining.append('archive:'+scope)

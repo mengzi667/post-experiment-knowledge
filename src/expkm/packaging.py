@@ -8,8 +8,8 @@ import zipfile
 from pathlib import Path
 from .common import atomic_bytes, digest, no_symlinks
 
-MODULES = ('__init__', '__main__', 'common', 'documents', 'store', 'sources', 'templates', 'destinations', 'selections', 'workflow', 'onboarding', 'archives', 'privacy', 'drive', 'knowledge', 'sync', 'feishu', 'cli', 'packaging', 'installer')
-SKILL_FILES = ('SKILL.md', 'agents/openai.yaml', 'scripts/expkm.py', 'scripts/expkm.cmd', 'references/contracts.md', 'references/sync-and-privacy.md', 'references/templates.md', 'references/destinations.md', 'references/archives.md')
+MODULES = ('__init__', '__main__', 'common', 'documents', 'store', 'sources', 'templates', 'destinations', 'selections', 'intake', 'workflow', 'onboarding', 'archives', 'privacy', 'drive', 'knowledge', 'sync', 'feishu', 'cli', 'packaging', 'installer')
+SKILL_FILES = ('SKILL.md', 'agents/openai.yaml', 'scripts/expkm.py', 'scripts/expkm.cmd', 'references/contracts.md', 'references/sync-and-privacy.md', 'references/templates.md', 'references/destinations.md', 'references/archives.md', 'references/intake.md')
 RUNTIME_LOCK = 'runtime/windows-x86_64.json'
 SPECIALISTS = ('experiment-record','experiment-synthesize','experiment-sync')
 PUBLIC_FILES = ('pyproject.toml', 'plugin.json', '.codex-plugin/plugin.json', '.agents/plugins/marketplace.json', 'README.md', 'BETA.md', 'LICENSE', 'install.cmd', 'scripts/install.py', 'ARCHITECTURE.md', 'RESEARCH.md', 'ROADMAP.md', 'VALIDATION.md', 'examples/synthetic30.py', RUNTIME_LOCK) + tuple('src/expkm/'+m+'.py' for m in MODULES) + tuple('skills/post-experiment-knowledge/'+f for f in SKILL_FILES) + tuple('skills/'+s+'/'+f for s in SPECIALISTS for f in ('SKILL.md','agents/openai.yaml'))

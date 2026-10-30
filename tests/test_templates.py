@@ -5,6 +5,8 @@ import pytest
 from expkm.store import Store
 from expkm.templates import Templates,TemplateRequired,default_template
 from expkm.knowledge import Knowledge,render
+from confirmed_cli import run_confirmed
+from expkm.intake import IntakeRequired
 from expkm.cli import parser,run
 from expkm.destinations import Destinations
 from test_knowledge import metadata,draft
@@ -52,7 +54,7 @@ def test_cli_refuses_record_before_reading_experiment_when_local_location_unset(
     store=tmp_path/'private';root=tmp_path/'input';root.mkdir();file=root/'bad.json';file.write_text('not json')
     args=parser().parse_args(['--store',str(store),'record','--topic','quality','--source-id','one','--file',str(file),'--root',str(root)])
     from expkm.selections import SelectionRequired
-    with pytest.raises(SelectionRequired):run(args)
+    with pytest.raises(IntakeRequired):run(args)
     assert Store(store).records()==[]
 
 def test_knowledge_without_report_is_template_independent(tmp_path):
@@ -101,9 +103,9 @@ def test_unknown_section_and_template_mutation_are_rejected(tmp_path):
 
 def test_cli_template_selection_is_explicit_and_prepare_contains_frozen_binding(tmp_path):
     store=tmp_path/'private'
-    def cli(*argv):return run(parser().parse_args(['--store',str(store),*map(str,argv)]))
+    def cli(*argv):return run_confirmed(Store(store),*argv)
     proposal=cli('template','preview','--topic','quality','--builtin')
-    assert cli('synthesize','--topic','quality','--prepare')['status']=='needs_agent_synthesis'
+    with pytest.raises(IntakeRequired):cli('synthesize','--topic','quality','--prepare')
     cli('template','confirm','--topic','quality','--proposal',proposal['proposal'],'--approve',proposal['version'])
     save_locally(store)
     output=cli('synthesize','--topic','quality','--prepare')
@@ -111,9 +113,9 @@ def test_cli_template_selection_is_explicit_and_prepare_contains_frozen_binding(
 
 def test_sync_requires_template_and_stale_plan_cannot_write_but_can_rollback(tmp_path):
     store=Store(tmp_path/'private');target=store.root/'report.md';content=store.root/'preview.md';content.write_text('Synthetic content')
-    def cli(*argv):return run(parser().parse_args(['--store',str(store.root),*map(str,argv)]))
+    def cli(*argv):return run_confirmed(store,*argv)
     argv=['sync','plan','--topic','quality','--target',target,'--content',content,'--root',store.root]
-    with pytest.raises(TemplateRequired):cli(*argv)
+    with pytest.raises(IntakeRequired):cli(*argv)
     assert not target.exists()
     first=approve(store);save_locally(store.root);p=cli(*argv)
     assert cli('sync','apply','--plan',p['output'],'--approve',p['plan_id'])['verified']
@@ -127,7 +129,7 @@ def test_sync_requires_template_and_stale_plan_cannot_write_but_can_rollback(tmp
 def test_cli_local_location_gate_happens_before_mlflow_configuration_or_network(tmp_path):
     args=parser().parse_args(['--store',str(tmp_path/'private'),'capture-mlflow','--topic','q','--run','synthetic'])
     from expkm.selections import SelectionRequired
-    with pytest.raises(SelectionRequired):run(args)
+    with pytest.raises(IntakeRequired):run(args)
 
 def test_mutable_exports_cannot_replace_template_confirmation(tmp_path):
     from expkm.cli import save_private

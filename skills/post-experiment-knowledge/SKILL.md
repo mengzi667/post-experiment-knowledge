@@ -5,7 +5,7 @@ description: Coordinate post-experiment knowledge work when a request spans arch
 
 # Post-Experiment Knowledge — coordinator
 
-This plugin has four implicitly callable skills and one shared runtime. Select steps from the user's intended outcome, not keywords or a mandatory full pipeline. Read only the specialist instructions needed now. No other skill installation or explicit @ selection is required for the normal plugin.
+This plugin has four implicitly callable skills and one shared runtime. Select steps from the user's intended outcome, not keywords or a mandatory full pipeline. **Before any experiment processing, follow the mandatory [request intake](references/intake.md): clarify this request, require its template and exact save locations, show the summary through native choice cards, and wait for actual confirmation.** This applies to every entry, including Record and analysis-only. Read only the relevant specialist instructions after intake. No explicit @ selection is required.
 
 | User's intended outcome | Steps |
 | --- | --- |
@@ -16,7 +16,7 @@ This plugin has four implicitly callable skills and one shared runtime. Select s
 | Trace a conclusion, inspect status, verify or recover a prior write | Relevant read-only trace/verify/recovery command; no setup questions unrelated to that operation |
 | Design/run/retry training, tune parameters, schedule GPU work | Outside this plugin; do not execute those actions |
 
-“Only analyze” does not authorize remote writes. “Save this prepared report” does not require new synthesis. “Organize the results and save the report” needs all relevant steps, not just Record. Already verified records may satisfy Record without importing again. If only one specialist initially matches but the user's request spans more stages, continue through this coordinator; never truncate the user's goal to that specialist.
+“Only analyze” does not authorize remote writes. “Save this prepared report” does not require new synthesis. “Organize the results and save the report” needs all relevant steps. Already verified records may satisfy Record without importing again. Every request still requires a confirmed template and concrete local result location; requested reports/uploads need their exact destinations too. If one specialist initially matches a multi-stage goal, continue through this coordinator and finish all requested stages.
 
 ## Clarify the outcome, then only today's missing details
 
@@ -28,13 +28,13 @@ scripts\expkm.cmd --store PRIVATE_STORE setup --topic TOPIC --stage workflow
 
 Keep its three-layer hierarchy in a fenced `text` block. Explain how to use it: provide existing results and the desired deliverable; Agent chooses stages, reuses confirmed choices, and reports verified outputs.
 
-Do not show outcome cards when the request already specifies the goal. For ambiguous “organize this” requests, use returned outcome options to clarify: full workflow, archive only, analysis only, or save/upload only. If “save/upload” is selected, distinguish a report from archives only if still unresolved. Accept free-text descriptions and explicit constraints; selection alone does not answer all details. Rephrase the intended outcome and required stages in one sentence. Do not ask the user to choose internal skill names.
+Use goal cards when the intended outcome needs clarification: full workflow, archive only, analysis only, or save/upload only. If the goal is clear, prefill it in this request's summary rather than making the user choose it again. Clarify scope and requirements, including preservation limits. Show the complete goal/template/location summary and obtain actual confirmation before processing. Do not ask the user to choose internal skill names.
 
-For each selected stage run `setup --stage record|synthesize|sync` (Sync: `--sync-kind report|archive|both`). Ask only the missing entries relevant to the actual context. If a directory or template is already explicitly provided/confirmed, use it rather than asking again. Clarify missing input sources, scope or research question only if evidence/context cannot resolve them.
+Run setup for the intended stage (Sync: --sync-kind report|archive|both). All entries require requirements, template and a concrete result location. Reuse existing values as prefilled choices, not automatic new-task authorization. Report/archive questions apply only to requested outputs. Pass the confirmed --intake VERSION to all processing commands. Only setup metadata and selected template data may be read before confirmation; don't inspect experiment payloads to infer missing requirements.
 
 Use native choice cards when available; pass each title and options, without internal IDs. Location questions are free text. If the host limits option counts, split the decision into two simple cards; don't lose an outcome. A preselection is not an answer. Without cards, use a short numbered fallback. Wait for required answers while continuing independent authorized work.
 
-Each proposal must reflect the concrete user-confirmed choice. Showing a digest is not authorization. Reuse exact authorization already given; don't add repeat approval flows.
+Each proposal must reflect the concrete user-confirmed choice. A digest/preselection is not authorization. Use the current request's explicit confirmation; preferences and previous requests are insufficient. If requirements/template/locations change, stop and review a new intake.
 
 ## Complete every requested stage
 
@@ -56,6 +56,8 @@ Before starting a multi-stage request, create a **private** workflow request JSO
 Select only requested stages/outputs. Source IDs are the actual Record source keys, never configuration aliases. Record-only still needs source_ids; Sync-only may omit source_ids. After synthesis pin the returned knowledge_version. Add each verified report plan path under its adapter and the archive_plan path. All plan paths stay inside PRIVATE_STORE. If a failed/process-only record does not support a claim, record an explicit reviewed reason in optional `excluded_from_claims: {record_id: reason}`; preserve that record in the index/archive. This does not count as supporting evidence.
 
 Continue until all requested deliverables have passed verification. For both report destinations, plan/apply/read back **each** destination; selected raw/trace uploads need a separate verified archive receipt. When a late evidence-link edit is required, update the report plan and audit the final content. Do not stop after generating a preview, uploading an archive, or succeeding at only one destination.
+
+Close the intake after delivery. A later request uses a new request ID and confirmation, even when its template and locations are unchanged. This gate enforces CLI scope and bindings; it cannot prove human UI exposure, force host invocation, or restrict trusted direct library callers.
 
 On missing authorization/dependency, source failure, concurrent edit or unknown remote outcome, retain completed work and mark the affected stage pending. Continue independent requested work when safe; do not blindly replay writes or silently reduce scope. The final answer distinguishes verified, preview-only and pending outputs and links the private deliverables. `workflow` verifies artifact coverage and current readback, not semantic truth or all unlisted sources; review scope, numerical meaning, readability and historical block mapping yourself.
 

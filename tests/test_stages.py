@@ -7,10 +7,12 @@ from expkm.store import Store
 from expkm.knowledge import Knowledge, render
 from expkm.templates import TemplateRequired
 from test_knowledge import draft
+from confirmed_cli import run_confirmed,approved_args
+from expkm.intake import IntakeRequired
 
 
 def cli(store, *args):
-    return run(parser().parse_args(['--store', str(store.root), *map(str, args)]))
+    return run_confirmed(store,*args)
 
 
 def select(store, command, *args):
@@ -19,40 +21,42 @@ def select(store, command, *args):
                '--proposal', p['proposal'], '--approve', p['version'])
 
 
-def test_record_setup_only_asks_for_private_location_and_reuses_it(tmp_path):
+def test_record_requires_request_template_and_private_location(tmp_path):
     store = Store(tmp_path/'private')
     value = cli(store, 'setup', '--topic', 'quality', '--stage', 'record')
-    assert [q['id'] for q in value['questions']] == ['record_location']
+    assert [q['id'] for q in value['questions']] == ['requirements','template','record_location']
     assert value['introduction'].count('```text') == 1
     select(store, 'record-location')
-    assert not cli(store, 'setup', '--topic', 'quality', '--stage', 'record')['questions']
+    select(store, 'template','--builtin')
+    assert [q['id'] for q in cli(store, 'setup', '--topic', 'quality', '--stage', 'record')['questions']]==['requirements']
     file = tmp_path/'result.json'; file.write_text('{"status":"failed","score":0}')
     r = cli(store, 'record', '--topic', 'quality', '--source-id', 'attempt',
             '--file', file, '--root', tmp_path)
     assert store.get(r['record_id'])['metadata']['status'] == 'failed'
-    assert not (store.root/'templates').exists()
+    assert (store.root/'templates').exists()
     assert not (store.root/'destinations').exists()
 
 
 def test_record_stops_before_input_read_until_location_confirmed(tmp_path):
     store = Store(tmp_path/'private')
-    from expkm.selections import SelectionRequired
-    with pytest.raises(SelectionRequired):
+    with pytest.raises(IntakeRequired):
         cli(store, 'record', '--topic', 'quality', '--source-id', 'a',
             '--file', tmp_path/'missing.json', '--root', tmp_path)
 
 
-def test_analysis_only_never_demands_template_or_report_destination(tmp_path):
+def test_analysis_requires_template_and_intake_but_no_unrequested_report_output(tmp_path):
     store = Store(tmp_path/'private')
     f = tmp_path/'result.txt'; f.write_text('Synthetic offline evidence')
     row = store.record('quality', 'one', {'status':'completed'}, [f], [tmp_path])
     value = cli(store, 'setup', '--topic', 'quality', '--stage', 'synthesize')
-    assert value['questions'] == []
+    assert {q['id'] for q in value['questions']} == {'requirements','template','record_location'}
+    with pytest.raises(IntakeRequired):cli(store, 'synthesize', '--topic', 'quality', '--prepare')
+    select(store, 'template','--builtin')
+    select(store, 'record-location')
     prepared = cli(store, 'synthesize', '--topic', 'quality', '--prepare')
     assert prepared['status'] == 'needs_agent_synthesis'
     state = Knowledge(store).update('quality', draft([row]))
-    assert state['report_template'] is None
-    with pytest.raises(TemplateRequired): render(state)
+    assert state['report_template'] is not None
     p = store.root/'draft.json'; p.write_text(json.dumps(draft([row])))
     result = cli(store, 'synthesize', '--topic', 'quality', '--draft', p,
                  '--expected-version', state['version'])
@@ -63,23 +67,24 @@ def test_analysis_only_never_demands_template_or_report_destination(tmp_path):
 def test_report_and_archive_setup_ask_different_questions(tmp_path):
     store = Store(tmp_path/'private')
     report = cli(store, 'setup', '--topic', 'quality', '--stage', 'sync')
-    assert [q['id'] for q in report['questions']] == ['template','save_method','save_location']
+    assert [q['id'] for q in report['questions']] == ['requirements','template','record_location','save_method','save_location']
     archive = cli(store, 'setup', '--topic', 'quality', '--stage', 'sync', '--sync-kind', 'archive')
-    assert [q['id'] for q in archive['questions']] == ['archive_scope','archive_location']
+    assert [q['id'] for q in archive['questions']] == ['requirements','template','record_location','archive_scope','archive_location']
     assert all(q.get('required') for q in archive['questions'])
 
 
-def test_archive_only_plans_without_report_or_template(tmp_path):
+def test_archive_only_requires_template_intake_and_archive_location_not_report_doc(tmp_path):
     store = Store(tmp_path/'private')
     f = tmp_path/'result.txt'; f.write_text('Synthetic archival evidence')
     store.record('quality', 'one', {'status':'aborted'}, [f], [tmp_path])
+    select(store, 'template','--builtin');select(store, 'record-location')
     select(store, 'archive-destination', '--scope', 'full', '--wiki', 'synthetic-parent')
     result = cli(store, 'archive', 'plan', '--topic', 'quality')
     plan = json.loads(Path(result['output']).read_text(encoding='utf-8'))
     assert plan['wiki_parent'] == 'synthetic-parent' and plan['scope'] == 'full'
-    assert not (store.root/'templates').exists()
-    assert not cli(store, 'setup', '--topic', 'quality', '--stage', 'sync',
-                   '--sync-kind', 'archive')['questions']
+    assert (store.root/'templates').exists() and not (store.root/'destinations').exists()
+    assert [q['id'] for q in cli(store, 'setup', '--topic', 'quality', '--stage', 'sync',
+                   '--sync-kind', 'archive')['questions']]==['requirements']
 
 
 def test_four_discoverable_skills_share_one_core_in_release(tmp_path):
@@ -115,6 +120,7 @@ def test_complete_workflow_requires_both_reports_and_full_archive_readback(tmp_p
     import expkm.drive as drive_module
     store = Store(tmp_path/'private')
     select(store, 'record-location')
+    select(store, 'template', '--builtin')
     rows = []
     for i in range(3):
         file = tmp_path/('run-'+str(i)+'.json'); write_json(file, metadata(.8))
@@ -123,7 +129,6 @@ def test_complete_workflow_requires_both_reports_and_full_archive_readback(tmp_p
         rows.append(store.get(result['record_id']))
     file = store.root/'draft.json'; write_json(file, draft(rows))
     knowledge = cli(store, 'synthesize', '--topic', 'quality', '--draft', file)
-    select(store, 'template', '--builtin')
     select(store, 'destination', '--mode', 'both', '--target', store.root/'report.md',
            '--root', store.root, '--document', 'synthetic-doc')
     select(store, 'archive-destination', '--scope', 'full', '--folder', 'synthetic-folder')

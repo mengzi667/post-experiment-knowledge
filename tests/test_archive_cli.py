@@ -1,11 +1,12 @@
 import json
 from pathlib import Path
 import pytest
+from confirmed_cli import run_confirmed, approved_args
 from expkm.cli import parser,run
 from test_archives import project,Drive
 
 
-def cli(store,*args):return run(parser().parse_args(['--store',str(store.root),*map(str,args)]))
+def cli(store,*args):return run_confirmed(store,*args)
 
 
 def test_archive_cli_preview_never_uploads_and_apply_requires_opt_in(tmp_path,monkeypatch):
@@ -30,7 +31,7 @@ def test_setup_cli_returns_intro_and_selection_cards(tmp_path):
     from expkm.store import Store
     store=Store(tmp_path/'private');value=cli(store,'setup','--topic','quality','--stage','sync','--sync-kind','both')
     assert value['status']=='needs_setup' and value['introduction'].index('```text')>0
-    assert [q['id'] for q in value['questions']]==['template','save_method','save_location','archive_scope','archive_location']
+    assert [q['id'] for q in value['questions']]==['requirements','template','record_location','save_method','save_location','archive_scope','archive_location']
 
 def test_cli_missing_scope_is_actionable_before_any_upload(tmp_path,monkeypatch,capsys):
     from expkm.cli import main
@@ -41,7 +42,7 @@ def test_cli_missing_scope_is_actionable_before_any_upload(tmp_path,monkeypatch,
     d=NeedsScope();p=cli(store,'archive','plan','--topic','quality')
     import expkm.drive as adapter
     monkeypatch.setattr(adapter,'LarkDrive',lambda *a,**k:d)
-    rc=main(['--store',str(store.root),'archive','apply','--plan',p['output'],'--approve',p['plan_id'],'--allow-feishu-upload'])
+    rc=main(['--store',str(store.root),*approved_args(store,['archive','apply','--plan',p['output'],'--approve',p['plan_id'],'--allow-feishu-upload'])])
     value=json.loads(capsys.readouterr().out)
     assert rc==2 and value['status']=='needs_feishu_authorization' and value['missing_scopes']==['space:document:retrieve']
     assert d.writes==0 and not (store.root/'archive-sync'/(p['plan_id']+'.json')).exists()

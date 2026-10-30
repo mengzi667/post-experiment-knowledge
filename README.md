@@ -1,12 +1,12 @@
 # Post-Experiment Knowledge
 
-**0.6.0-beta.1 · 实验后知识管理插件 · Windows x64 一键安装测试版**
+**0.7.0-beta.1 · 实验后知识管理插件 · Windows x64 一键安装测试版**
 
 把已完成实验整理为“专题主报告 → 实验索引 → 完整证据与追溯档案”，保留原始证据，持续修订结论，避免报告反复堆叠。不执行实验。
 
 1. 在 GitHub Releases 下载 Windows x64 ZIP 并解压。
 2. 双击 `install.cmd`，安装器会校验文件并注册到当前用户的 Codex。无需安装 Python 或 pip，无需管理员权限。
-3. 新开 Codex 对话，直接说明要归档、分析、保存报告或全部完成；Agent 根据场景选择技能。也可显式输入 `$post-experiment-knowledge`。先简要介绍功能和三层结构，只问当前步骤缺少的信息。
+3. 新开 Codex 对话，直接说明要归档、分析、保存报告或全部完成；Agent 根据场景选择技能。也可显式输入 `$post-experiment-knowledge`。每次新请求先用原生选项卡问清需求、确认模板和具体保存位置，再开始处理；已有偏好仅预填，不自动执行。
 
 需要已有支持插件的 Codex。飞书功能另外需要自己的 lark-cli 和账号授权；本地 Markdown 无需飞书。请先阅读 [Beta 已知限制](BETA.md)。本包不会携带作者的实验资料、私有地址或凭据。
 
@@ -32,41 +32,58 @@ Optional core installation: `python -m pip install --no-build-isolation --no-dep
 
 ## Four skills, one runtime
 
-| Skill | Select when | Required information |
-| --- | --- | --- |
-| post-experiment-knowledge | Multi-stage work, historical reorganization, unclear outcome | Desired deliverables; clarify only if unclear |
-| experiment-record | Archive completed/failed/partial evidence | Relevant inputs, actual attempt identity, confirmed private local store |
-| experiment-synthesize | Compare evidence or maintain conclusions | Relevant evidence and research question; no report template/target |
-| experiment-sync | Save a prepared report or upload archives | Report: template + concrete targets; archives: scope + exact parent |
+| Skill | Purpose |
+| --- | --- |
+| post-experiment-knowledge | Clarify the request and coordinate all required stages |
+| experiment-record | Archive existing completed/failed/partial evidence with immutable identities |
+| experiment-synthesize | Compare evidence and maintain conclusions/decisions |
+| experiment-sync | Save reports and explicitly selected archives; read back each output |
 
-All four allow implicit invocation; users need not name a skill. Selection depends on the host Agent's semantic matching, not a guaranteed keyword dispatcher or task monitor. Clear requests execute directly. Ambiguous requests get an outcome card before stage-specific questions. Native cards are rendered by the host; plain numbered choices are the fallback.
+All four allow implicit invocation and share one core, private store/config and isolated bundled interpreter. A full request completes every required stage; a narrower confirmed request cannot silently add others. Host semantic matching is not a deterministic watcher.
 
 ```text
 Research topic
-├── Main report: current conclusions, key evidence, limitations and decisions
+├── Main report: current conclusions, key evidence, limits and decisions
 ├── Experiment index: attempts, differences, states and archive links
 └── Complete archive
-    ├── Raw evidence: results, configuration, logs, controlled artifact references
+    ├── Raw evidence: results, configuration, logs and artifact references
     └── Trace: record IDs, revisions, hashes and claim relationships
 ```
 
-These views are produced as requested, not a mandatory full workflow. A full request runs Record → Synthesize → Sync and checks every deliverable. All skills share one src/expkm core, private store/config and bundled interpreter under skills/post-experiment-knowledge/python.
+## Every request starts with confirmed intake
 
-## Stage-specific setup and completion
+Before formal experiment processing, clarify this request's goal, source scope, requirements and expected outputs, require a confirmed template and exact save locations, then obtain confirmation of the complete summary. This also applies to Record-only and analysis-only. Prior topic choices may prefill fields; they do not authorize a new request.
 
-All commands below follow skills/post-experiment-knowledge/scripts/expkm.cmd and a global --store PRIVATE_STORE. Real inputs/settings/receipts remain outside the source and installed plugin.
+Use native choice cards for goal/scope, template source, save method, upload scope and final confirmation. Paths, links and special requirements use the same tool's free-text fields. A preselection or silence is not confirmation. Without native cards, use concise numbered text.
 
-1. Record: setup --topic quality --stage record. Confirm the exact local archive path via record-location preview/confirm. Only then record explicit existing files and authorized roots. Verify immutable evidence. No report template or destination needed.
-2. Synthesize: setup --topic quality --stage synthesize. Prepare evidence with synthesize --prepare; the authorized Agent reviews comparability and writes claims/decisions. synthesize --draft validates immutable references and numerical assertions. Pure analysis omits report_sections and does not publish. MLflow is optional and read-only.
-3. Sync report: setup --topic quality --stage sync --sync-kind report. Confirm an existing template or explicitly review a new proposal through template preview/confirm. Confirm local Markdown, Feishu or both and exact file/document via destination preview/confirm. New report selections default to no archive upload. Prior selections are reused. report-preview --topic quality --sections PRIVATE_SECTION_MAPPING renders the chosen template; prepared reports can go straight to sync planning.
-4. Sync archives: setup --topic quality --stage sync --sync-kind archive (or both). archive-destination preview/confirm selects trace/full and one exact folder or Wiki parent independently of reports/templates.
-5. Plan concrete changes, apply within existing user authorization and read back every requested output. Both report destinations require separate plans/receipts. Archives require their own plan and byte-verified receipt. If permissions/dependencies/conflicts prevent a stage, preserve completed work and explicitly retain pending steps.
+The template card offers:
 
-For multi-stage work the coordinator keeps a private workflow request and uses workflow --request PRIVATE_REQUEST to audit expected sources, evidence integrity, current knowledge, historical mappings when requested and final readback per destination. New report plans pin existing knowledge versions; stale conclusions cannot be satisfied by an old verified report. An audit verifies the listed scope, not arbitrary semantic truth or unlisted input completeness. Review readability, numbers and mapping manually.
+1. Provide an existing template file/link/structure.
+2. Explicitly reuse a previously supplied template.
+3. Ask Codex to recommend a template from actual experiment content/results, then review it.
 
-Template heading order and general data/environment/metric tables remain intact; result formats can vary. No template is auto-selected. Template/source changes require review and new confirmation. Recovery of old plans/records remains accessible after upgrades. See the skill's template/destination/archive references.
+The recommendation branch first confirms requirements, bounded source scope and exact positions, then uses a restricted template-recommendation intake for necessary read-only context. It cannot archive, synthesize research conclusions or publish. Show the recommendation/reasons and obtain template confirmation before a separate final execution intake. No recommendation is automatically adopted.
 
-Feishu uses the user's own optional lark-cli and private allowlist. Document creation/relocation requires the Agent's available external tools and concrete authorization; the core adapter only edits existing supported document blocks. No auto-login, permission escalation, model service or sharing change.
+## Commands and boundaries
+
+Use skills/post-experiment-knowledge/scripts/expkm.cmd on Windows. Global --store, --config and --intake options precede the command. Real data/settings/receipts stay outside the source and installed plugin.
+
+1. setup --topic quality --stage record|synthesize|sync (Sync --sync-kind report|archive|both) returns required questions. The coordinator's default workflow mode clarifies an ambiguous outcome.
+2. Confirm the chosen template with template preview/confirm and the exact private result directory with record-location preview/confirm. Requested reports additionally select exact destination targets; requested uploads select archive-destination scope/parent. No arbitrary default platform or path.
+3. Author the private request metadata file, run intake preview --file PRIVATE_REQUEST, show the concrete summary, await the user's response and intake confirm --proposal PRIVATE_PROPOSAL --approve VERSION.
+4. Pass --intake VERSION to Record/Synthesize/new Sync and export commands. The CLI checks scope, stages, authorized roots and current template/location versions before payload reads. New report/archive plans bind the intake; apply cannot replay a plan under another intake. Original plan review, allowlists and write/upload flags still apply.
+5. Keep the coordinator's workflow manifest current and verify every requested output separately. Both report targets require two receipts; archives require exact parent and downloaded size/SHA-256. Archive freshness audits reuse the sealed size budget, including explicit large export limits.
+6. Close the request with intake close --version VERSION after delivery. A closed request cannot be reused. New requests use new IDs and confirmation, even with identical preferences.
+
+See [the intake schema and recommendation procedure](skills/post-experiment-knowledge/references/intake.md). Current synthesis/export operates on all existing records of the selected topic. Do not silently widen a subset request; use an explicitly separate topic/store or explain the unsupported scope.
+
+The mandatory result location for local-only work is the exact private store. No unrequested report document is required, but the mandatory template still is. Prepared reports can go directly to Sync after intake; don't force re-recording or re-analysis.
+
+Templates preserve headings/order and general data/environment/metric tables while allowing different result formats. No built-in template is silently chosen. Historical records/plans remain verifiable; new applies need current intake. Core Python primitives are trusted application APIs and remain platform independent; the CLI gate cannot prevent an authorized developer from calling them directly.
+
+The runtime proves explicit confirmation parameters and bindings, not that a human saw a card or who clicked. It cannot force a host to invoke this plugin. Semantic interpretation and readability still need Agent/user review.
+
+Feishu uses each user's own optional lark-cli, account and exact target authorization. Node creation/relocation uses available external tools only after the concrete parent/names/setup scope are confirmed; no experimental content is populated before final intake. No automatic login, permission escalation, model service, telemetry or sharing change.
 
 
 ## Upload private evidence and trace archives

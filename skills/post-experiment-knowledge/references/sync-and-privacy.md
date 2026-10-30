@@ -8,6 +8,8 @@ Local record, comparison, synthesis preparation and Markdown operations do not u
 
 The target is outside the distributable package. Existing unmanaged bytes remain intact. One managed comment region is added or replaced; ambiguous markers are rejected. The private plan contains original and desired bytes. `sync apply --plan PRIVATE_PLAN --approve PLAN_DIGEST` applies only that exact plan. Verification checks the full desired content; rollback refuses to overwrite a later edit.
 
+New processing and write operations require this request's confirmed --intake VERSION as described in [intake](intake.md). Preferences are not task authorization. New plans bind that intake; old plans remain verifiable but cannot be newly applied under an unrelated request.
+
 ## Feishu
 
 Private config:

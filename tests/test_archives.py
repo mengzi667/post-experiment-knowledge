@@ -126,10 +126,10 @@ def test_destination_change_blocks_upload_but_historical_verification_survives(t
 def test_intro_has_text_tree_before_option_questions_and_reuses_confirmed_choices(tmp_path):
     store=Store(tmp_path/'private');status=setup_status(store,'quality','sync','both');assert status
     assert '```text\n' in status['introduction'] and '专题主报告' in status['introduction'] and '追溯' in status['introduction']
-    assert {q['id'] for q in status['questions']}=={'template','save_method','save_location','archive_scope','archive_location'}
+    assert {q['id'] for q in status['questions']}=={'requirements','template','record_location','save_method','save_location','archive_scope','archive_location'}
     assert all(2<=len(q['options'])<=3 for q in status['questions'] if 'options' in q)
     ready,_=project(tmp_path/'ready');value=setup_status(ready,'quality','sync','both');assert value
-    assert value['questions']==[] and value['status']=='ready'
+    assert [q['id'] for q in value['questions']]==['requirements'] and value['execution_allowed'] is False
 
 
 def test_full_archive_retains_failed_revision_and_superseded_knowledge(tmp_path):

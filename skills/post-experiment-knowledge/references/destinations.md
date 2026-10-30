@@ -1,6 +1,6 @@
 # Report save method and location
 
-Record needs only a confirmed private local store; pure analysis needs evidence, not report settings. At report Sync run setup --topic quality --stage sync --sync-kind report. For archives only use archive; for both outputs use both. Ask missing relevant choices after the first-use introduction and fenced tree.
+Record and analysis both require the mandatory request/template/exact-local-store intake. Requested reports need their exact additional targets. At report Sync run setup --topic quality --stage sync --sync-kind report. For archives only use archive; for both outputs use both. Ask missing relevant choices after the first-use introduction and fenced tree.
 
 Report modes: local Markdown (markdown), an existing Feishu document (feishu), or both. Use destination preview --topic quality --mode markdown --target ABSOLUTE_REPORT_FILENAME --root AUTHORIZED_DIRECTORY; Feishu uses --mode feishu --document DOCUMENT_TOKEN; both supplies both locations. Review the exact proposal then destination confirm --topic quality --proposal PRIVATE_PROPOSAL --approve VERSION. A changed binding also needs --expected-version CURRENT_VERSION. Existing explicit conversation authorization can cover the exact selection; a self-supplied digest cannot replace it.
 

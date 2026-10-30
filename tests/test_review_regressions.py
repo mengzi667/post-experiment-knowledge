@@ -12,6 +12,7 @@ from test_knowledge import metadata,make_records,draft
 from test_sync import FakeDocument
 from expkm.templates import Templates,default_template
 from expkm.destinations import Destinations
+from confirmed_cli import run_confirmed
 
 def select_template(root):
     t=Templates(Store(root));p=t.propose('q',default_template(),'synthetic-confirmation');t.confirm('q',p,p['version'])
@@ -82,8 +83,8 @@ def test_normalized_metadata_sidecar_is_also_archived(tmp_path):
     select_template(tmp_path/'private')
     root=tmp_path/'input';root.mkdir();result=root/'result.txt';result.write_text('raw result')
     sidecar=root/'metadata.json';sidecar.write_text('{"status":"completed","config":{"rank":8}}')
-    args=parser().parse_args(['--store',str(tmp_path/'private'),'record','--topic','q','--source-id','one','--file',str(result),'--root',str(root),'--metadata',str(sidecar)])
-    out=run(args);row=Store(tmp_path/'private').get(out['record_id'])
+    out=run_confirmed(Store(tmp_path/'private'),'record','--topic','q','--source-id','one','--file',result,'--root',root,'--metadata',sidecar)
+    row=Store(tmp_path/'private').get(out['record_id'])
     assert len(row['evidence'])==2
     assert any(e['origin']==str(sidecar.resolve()) for e in row['evidence'])
 

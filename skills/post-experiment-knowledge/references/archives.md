@@ -1,6 +1,6 @@
 # Private evidence and trace archive uploads
 
-Archive-only Sync needs no report template/document. Use setup --topic quality --stage sync --sync-kind archive. Select scope and exact parent with archive-destination preview --topic quality --scope full|trace --wiki NODE (or --folder TOKEN), then confirm the reviewed proposal. Independent selections override legacy report archive settings. All commands share the coordinator launcher/store.
+Archive-only Sync needs the mandatory request/template/exact-store intake and archival scope/parent; an unrequested report document is unnecessary. Use setup --topic quality --stage sync --sync-kind archive. Select scope and exact parent with archive-destination preview --topic quality --scope full|trace --wiki NODE (or --folder TOKEN), then confirm the reviewed proposal. Independent selections override legacy report archive settings. All commands share the coordinator launcher/store.
 
 Use only after the user explicitly selects `archives.scope` and an exact existing Drive folder. Report destination and archival upload are independent: Feishu-only reports can use no upload, trace or full. Local reports can also have an explicitly selected private Drive archive. No public upload, share change, folder creation or source execution occurs.
 

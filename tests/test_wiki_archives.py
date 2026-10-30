@@ -73,13 +73,14 @@ def test_setup_exposes_only_private_confirmed_personal_space_default(tmp_path,mo
     from expkm.store import Store
     value=setup_status(Store(tmp_path/'project'),'quality')
     assert value['default_personal_space']==pref['personal_space']
-    assert [q['id'] for q in value['questions']]==['outcome']
+    assert [q['id'] for q in value['questions']]==['requirements','template','record_location','outcome']
 
 
 def test_cli_wiki_selection_and_adoption_are_read_only(tmp_path,monkeypatch):
+    from confirmed_cli import run_confirmed, approved_args
     from expkm.cli import parser,run
     store,_=project(tmp_path);d=Destinations(store);old=d.require('quality')
-    def cli(*args):return run(parser().parse_args(['--store',str(store.root),*map(str,args)]))
+    def cli(*args):return run_confirmed(store,*args)
     p=cli('destination','preview','--topic','quality','--mode','feishu','--document','synthetic-doc','--archive-scope','full','--archive-wiki','synthetic-wiki-parent')
     cli('destination','confirm','--topic','quality','--proposal',p['proposal'],'--approve',p['version'],'--expected-version',old['version'])
     summary=cli('archive','plan','--topic','quality');plan=json.loads(Path(summary['output']).read_text(encoding='utf-8'))
