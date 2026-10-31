@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import pytest
 
 def call(*args):
     from confirmed_cli import approved_args
@@ -37,11 +38,12 @@ def test_cli_records_and_previews_without_any_platform(tmp_path):
     r=call('--store',store,'synthesize','--topic','quality','--prepare')
     assert r.returncode==0 and json.loads(r.stdout)['status']=='needs_agent_synthesis'
 
-def test_cli_errors_do_not_echo_experiment_content(tmp_path):
+@pytest.mark.parametrize('mode,success',[('structured',False),('auto',True)])
+def test_cli_errors_do_not_echo_experiment_content(tmp_path,mode,success):
     select_setup(tmp_path/'private','q')
     root=tmp_path/'input';root.mkdir();p=root/'result.json';p.write_text('{"private":"DO_NOT_ECHO_EXPERIMENT_PAYLOAD",BROKEN')
-    r=call('--store',tmp_path/'private','record','--topic','q','--source-id','a','--file',p,'--root',root)
-    assert r.returncode!=0
+    r=call('--store',tmp_path/'private','record','--topic','q','--source-id','a','--file',p,'--root',root,'--source-mode',mode)
+    assert (r.returncode==0) is success
     assert 'DO_NOT_ECHO_EXPERIMENT_PAYLOAD' not in r.stdout+r.stderr
 
 def test_cli_has_no_experiment_execution_commands():

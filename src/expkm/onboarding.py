@@ -88,6 +88,8 @@ def setup_status(store, topic, stage='workflow', sync_kind='report', intake_vers
             'execution_allowed':confirmed is not None and confirmed['definition']['phase']=='execution' and not questions,
             'recommendation_read_allowed':confirmed is not None and confirmed['definition']['phase']=='template-recommendation',
             'introduction':INTRODUCTION, 'questions':questions,
+            'card_protocol':{'questions_per_call':1,'durable_queue':'cards start|next|answer|append|status|close',
+                             'advance_only_after_actual_reply':True,'resume_pending_on_partial_reply':True},
             'suggested_record_location':str(store.root), 'default_personal_space':personal_space,
             'preference_warning':preference_warning,
             'template_version':template['version'] if template else None,

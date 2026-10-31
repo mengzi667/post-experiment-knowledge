@@ -15,6 +15,7 @@ from .onboarding import setup_status
 from .drive import FeishuPermissionError
 from .selections import Selections, SelectionRequired
 from .intake import Intakes, IntakeRequired
+from .cards import Cards, CardsRequired
 
 def parser():
     p = argparse.ArgumentParser(prog='expkm', description='Record / Synthesize / Sync already-produced results; no experiment execution.')
@@ -23,6 +24,8 @@ def parser():
     p.add_argument('--intake', help='Explicit confirmed request version; never inferred from old preferences')
     sub = p.add_subparsers(dest='command', required=True)
     sub.add_parser('doctor'); sub.add_parser('reindex')
+    cards=sub.add_parser('cards');cards.add_argument('operation',choices=['start','next','answer','append','status','close'])
+    cards.add_argument('--request-id');cards.add_argument('--session');cards.add_argument('--file',type=Path)
     intake = sub.add_parser('intake'); intake.add_argument('operation', choices=['preview','confirm','show','close'])
     intake.add_argument('--file', type=Path); intake.add_argument('--proposal', type=Path)
     intake.add_argument('--approve'); intake.add_argument('--version')
@@ -54,6 +57,7 @@ def parser():
     r = sub.add_parser('record'); r.add_argument('--topic', required=True); r.add_argument('--source-id', required=True)
     r.add_argument('--file', type=Path, action='append', required=True); r.add_argument('--root', type=Path, action='append', required=True)
     r.add_argument('--metadata', type=Path)
+    r.add_argument('--source-mode',choices=['auto','structured','raw'],default='auto',help='Auto archives unparsed sources inertly; structured is strict; raw never extracts metrics')
     m = sub.add_parser('capture-mlflow'); m.add_argument('--topic', required=True); m.add_argument('--run', required=True)
     m.add_argument('--history-key', action='append', default=[]); m.add_argument('--artifact', action='append', default=[])
     s = sub.add_parser('synthesize'); s.add_argument('--topic', required=True); s.add_argument('--prepare', action='store_true')
@@ -95,6 +99,15 @@ def run(args):
     store = Store(args.store)
     templates = Templates(store)
     destinations = Destinations(store)
+    if args.command=='cards':
+        cards=Cards(store)
+        if args.operation=='start':
+            if args.file is None:raise ValueError('Question metadata file required')
+            return cards.start(args.request_id,read_json(within(args.file,[store.root])))
+        if args.operation in {'answer','append'}:
+            if args.file is None:raise ValueError('Explicit reply or question metadata required')
+            return getattr(cards,args.operation)(args.session,read_json(within(args.file,[store.root])))
+        return getattr(cards,args.operation)(args.session)
     if args.command == 'intake':
         selections=Intakes(store)
         if args.operation == 'preview':
@@ -245,7 +258,7 @@ def run(args):
         for root in args.root:within(root,authorized)
         for path in args.file:within(path,authorized)
         paths = [within(p, args.root) for p in args.file]
-        parsed = [read_result(p) for p in paths]
+        parsed = [read_result(p,mode=args.source_mode) for p in paths]
         metadata = parsed[0]['data'] if parsed[0]['format'] == 'json' and isinstance(parsed[0]['data'], dict) else {}
         roots = list(args.root)
         if args.metadata:
@@ -257,10 +270,11 @@ def run(args):
             if meta_path not in paths:
                 paths.append(meta_path); parsed.append(meta_source)
             roots.append(store.root)
-        metadata = {**metadata, 'status': metadata.get('status', 'unknown')}
+        descriptors=[{k:v for k,v in p.items() if k!='data'} for p in parsed]
+        metadata = {**metadata, 'status': metadata.get('status', 'unknown'),'source_files':descriptors}
         row = store.record(args.topic, args.source_id, metadata, paths, roots,
                            expected_hashes={str(path): parsed[i]['sha256'] for i, path in enumerate(paths)})
-        return {'record_id': row['record_id'], 'revision': row['revision'], 'evidence_files': len(row['evidence'])}
+        return {'record_id': row['record_id'], 'revision': row['revision'], 'evidence_files': len(row['evidence']),'sources':descriptors}
     if args.command == 'capture-mlflow':
         if args.run not in active['definition'].get('mlflow_runs',[]):
             raise ValueError('MLflow Run was not selected in this request')
@@ -473,6 +487,9 @@ def main(argv=None):
         print(json.dumps({'status':'needs_request_confirmation',
                           'reason':exc.reason,
                           'message':'First clarify goal, scope and requirements; select a template and exact save locations; confirm this request before accessing experiment payloads.'}))
+        return 2
+    except CardsRequired:
+        print(json.dumps({'status':'needs_user_answer','message':'Resume cards next; submit one actual reply at a time before confirming this request.'}))
         return 2
     except DestinationRequired:
         print(json.dumps({'status': 'needs_destination_selection', 'message': 'First select and explicitly confirm the report save method and location. No report workflow was started.'}))

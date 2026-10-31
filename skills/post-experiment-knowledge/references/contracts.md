@@ -8,7 +8,7 @@ Every formal CLI request needs confirmed goal/scope/requirements, a mandatory [t
 
 `record --topic quality --source-id actual-attempt-01 --file result.json --root INPUT_DIRECTORY --metadata metadata.json`
 
-An actual source ID identifies an execution, not a configuration. Re-importing that source with changed bytes creates a revision; independent repetitions require independent IDs. Existing files are read, never executed. Formats: JSON, JSONL, CSV, UTF-8 text (.txt / .log), Markdown and DocxXML. Unknown formats need an explicit conversion outside this tool. CSV cells stay strings and blanks are not zero.
+An actual source ID identifies an execution, not a configuration. Re-importing that source with changed bytes creates a revision; independent repetitions require independent IDs. Existing files are read, never executed. Record defaults to auto mode: JSON, JSONL, CSV, UTF-8 text (.txt / .log), Markdown and DocxXML extract finite data when valid; all other selected regular files, including code/binary and invalid/non-finite structured inputs, retain their original bytes as raw-only evidence. Extraction descriptors include SHA-256, byte count, format, extraction state and reason; unavailable row counts remain null. No metrics are inferred from raw-only sources, and NaN/Infinity are never changed to zero/null in the original. Strict structured and explicit raw modes are available. Metadata sidecars always require finite JSON objects. CSV cells stay strings and blanks are not zero. Export privacy checks remain mandatory.
 
 Normalized metadata example:
 

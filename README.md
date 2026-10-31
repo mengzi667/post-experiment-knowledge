@@ -1,6 +1,6 @@
 # Post-Experiment Knowledge
 
-**0.7.0-beta.1 · 实验后知识管理插件 · Windows x64 一键安装测试版**
+**0.8.0-beta.1 · 实验后知识管理插件 · Windows x64 一键安装测试版**
 
 把已完成实验整理为“专题主报告 → 实验索引 → 完整证据与追溯档案”，保留原始证据，持续修订结论，避免报告反复堆叠。不执行实验。
 
@@ -54,7 +54,7 @@ Research topic
 
 Before formal experiment processing, clarify this request's goal, source scope, requirements and expected outputs, require a confirmed template and exact save locations, then obtain confirmation of the complete summary. This also applies to Record-only and analysis-only. Prior topic choices may prefill fields; they do not authorize a new request.
 
-Use native choice cards for goal/scope, template source, save method, upload scope and final confirmation. Paths, links and special requirements use the same tool's free-text fields. A preselection or silence is not confirmation. Without native cards, use concise numbered text.
+Use native choice cards for goal/scope, template source, save method, upload scope and final confirmation. Send exactly one question per native call and wait for its actual answer before advancing. The private `cards start|next|answer|append|status|close` queue retains unanswered items across interruptions; intake confirmation refuses to skip them. Re-present the pending card if it was not visible. Paths, links and special requirements use the same tool's free-text fields. A preselection or silence is not confirmation. Without native cards, use the same one-at-a-time numbered fallback.
 
 The template card offers:
 
@@ -82,6 +82,8 @@ The mandatory result location for local-only work is the exact private store. No
 Templates preserve headings/order and general data/environment/metric tables while allowing different result formats. No built-in template is silently chosen. Historical records/plans remain verifiable; new applies need current intake. Core Python primitives are trusted application APIs and remain platform independent; the CLI gate cannot prevent an authorized developer from calling them directly.
 
 The runtime proves explicit confirmation parameters and bindings, not that a human saw a card or who clicked. It cannot force a host to invoke this plugin. Semantic interpretation and readability still need Agent/user review.
+
+Record defaults to `--source-mode auto`: finite known sources extract metadata; code, binaries, unknown encodings, malformed JSON and NaN/Infinity inputs are preserved as inert exact bytes with a raw-only descriptor and no inferred metrics. No Agent library bypass, code execution, unpickling or original-file conversion is required. Use `--source-mode structured` for strict finite parsing or `--source-mode raw` to skip extraction. Metadata sidecars remain strict finite JSON. Local archival does not grant upload permission or bypass export credential checks.
 
 Feishu uses each user's own optional lark-cli, account and exact target authorization. Node creation/relocation uses available external tools only after the concrete parent/names/setup scope are confirmed; no experimental content is populated before final intake. No automatic login, permission escalation, model service, telemetry or sharing change.
 

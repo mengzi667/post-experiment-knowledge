@@ -7,24 +7,46 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 from .common import canonical, digest, no_symlinks
 
-def read_result(path):
+def read_result(path, mode='structured'):
+    """Extract finite structured values or describe inert, byte-exact evidence.
+
+    Auto/raw never import code, deserialize executable objects, or normalize the
+    original. Raw-only sources cannot contribute automatically extracted metrics.
+    Metadata sidecars must continue to use structured mode.
+    """
+    if mode not in {'auto','structured','raw'}:
+        raise ValueError('Unknown source mode')
     path = no_symlinks(path)
     kind = path.suffix.lower().lstrip('.')
-    if kind not in {'json', 'jsonl', 'csv', 'txt', 'log', 'md', 'xml'}:
-        raise ValueError('Unsupported result format; code and serialized executables are not loaded')
-    raw = path.read_bytes(); text = raw.decode('utf-8-sig')
-    if kind == 'json':
-        data = json.loads(text)
-    elif kind == 'jsonl':
-        data = [json.loads(line) for line in text.splitlines() if line.strip()]
-    elif kind == 'csv':
-        data = list(csv.DictReader(io.StringIO(text)))
-    else:
-        data = text
-    # Enforce finite JSON numbers without interpreting absent metrics as zero.
-    canonical(data)
-    return {'format': kind, 'sha256': digest(raw), 'rows': len(data) if isinstance(data, list) else 1,
-            'data': data, 'extraction': 'source_preserved', 'execution_performed': False}
+    raw = path.read_bytes()
+    descriptor={'format':kind or 'unknown','sha256':digest(raw),'bytes':len(raw),'rows':None,
+                'data':None,'extraction':'raw_only','execution_performed':False}
+    def inert(reason):
+        return {**descriptor,'reason':reason}
+    if mode=='raw':return inert('explicit_raw')
+    if kind not in {'json','jsonl','csv','txt','log','md','xml'}:
+        if mode=='auto':return inert('unparsed_format')
+        raise ValueError('Unsupported structured format; source code is never executed')
+    try:
+        text=raw.decode('utf-8-sig')
+    except UnicodeError:
+        if mode=='auto':return inert('non_utf8')
+        raise ValueError('Structured sources require UTF-8') from None
+    try:
+        if kind=='json':data=json.loads(text)
+        elif kind=='jsonl':data=[json.loads(line) for line in text.splitlines() if line.strip()]
+        elif kind=='csv':data=list(csv.DictReader(io.StringIO(text)))
+        else:data=text
+    except (ValueError,csv.Error):
+        if mode=='auto':return inert('invalid_structure')
+        raise ValueError('Invalid structured source') from None
+    try:
+        canonical(data)
+    except ValueError:
+        if mode=='auto':return inert('nonfinite_number')
+        raise ValueError('Structured numbers must be finite') from None
+    return {**descriptor,'rows':len(data) if isinstance(data,list) else 1,
+            'data':data,'extraction':'structured','reason':None}
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):

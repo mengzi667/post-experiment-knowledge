@@ -113,6 +113,8 @@ class Intakes:
         if approved!=value['version']:
             raise ValueError('Confirm the exact reviewed requirements summary')
         with lock(self.store.root):
+            from .cards import Cards
+            Cards(self.store).require_complete(value['definition']['request_id'])
             if (self.root/'closed'/(value['version']+'.json')).exists():
                 raise IntakeRequired('Closed requests cannot be reopened','request_closed')
             request=self.root/'requests'/(value['definition']['request_id']+'.json')

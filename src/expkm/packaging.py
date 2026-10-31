@@ -8,7 +8,7 @@ import zipfile
 from pathlib import Path
 from .common import atomic_bytes, digest, no_symlinks
 
-MODULES = ('__init__', '__main__', 'common', 'documents', 'store', 'sources', 'templates', 'destinations', 'selections', 'intake', 'workflow', 'onboarding', 'archives', 'privacy', 'drive', 'knowledge', 'sync', 'feishu', 'cli', 'packaging', 'installer')
+MODULES = ('__init__', '__main__', 'common', 'documents', 'store', 'sources', 'templates', 'destinations', 'selections', 'intake', 'cards', 'workflow', 'onboarding', 'archives', 'privacy', 'drive', 'knowledge', 'sync', 'feishu', 'cli', 'packaging', 'installer')
 SKILL_FILES = ('SKILL.md', 'agents/openai.yaml', 'scripts/expkm.py', 'scripts/expkm.cmd', 'references/contracts.md', 'references/sync-and-privacy.md', 'references/templates.md', 'references/destinations.md', 'references/archives.md', 'references/intake.md')
 RUNTIME_LOCK = 'runtime/windows-x86_64.json'
 SPECIALISTS = ('experiment-record','experiment-synthesize','experiment-sync')
